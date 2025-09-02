@@ -8,16 +8,18 @@ import { ChartTool } from "./ChartTool";
 import { TableTool } from "./TableTool";
 import { FormTool } from "./FormTool";
 import { Separator } from "@/components/ui/separator";
-import { 
-  CalendarIcon, 
-  UserIcon, 
-  BuildingIcon, 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  CalendarIcon,
+  UserIcon,
+  BuildingIcon,
   ClockIcon,
   CheckCircleIcon,
   AlertCircleIcon,
   InfoIcon
 } from "lucide-react";
 import Image from "next/image";
+import { determineLayout, arrangeComponents, getResponsiveClasses, generateLayoutClasses } from "@/src/lib/layoutUtils";
 
 interface CardAction {
   label: string;
@@ -169,6 +171,24 @@ const renderNestedComponent = (component: any, key: string) => {
     case 'chart':
       return <ChartTool key={key} {...component} />;
 
+    case 'avatar':
+      return (
+        <div key={key} className="flex items-center space-x-4 p-4">
+          <Avatar className={component.size === 'large' ? 'h-16 w-16' : component.size === 'small' ? 'h-8 w-8' : 'h-12 w-12'}>
+            <AvatarImage src={component.src} alt={component.alt || 'Avatar'} />
+            <AvatarFallback>{component.fallback || 'U'}</AvatarFallback>
+          </Avatar>
+          {component.name && (
+            <div>
+              <h4 className="font-semibold text-black">{component.name}</h4>
+              {component.description && (
+                <p className="text-sm text-gray-600">{component.description}</p>
+              )}
+            </div>
+          )}
+        </div>
+      );
+
     default:
       // If it's a plain object with data, try to render it as a simple section
       if (component.title && (component.fields || component.data)) {
@@ -195,6 +215,32 @@ const renderNestedComponent = (component: any, key: string) => {
       }
       return null;
   }
+};
+
+// Intelligent layout renderer for multiple components
+const renderComponentsWithLayout = (components: any[]) => {
+  if (!components || components.length === 0) return null;
+
+  // Extract component types for layout determination
+  const componentTypes = components.map(comp => comp.type || 'unknown');
+  const componentLayouts = arrangeComponents(componentTypes);
+  const layoutConfig = determineLayout(componentLayouts);
+
+  // Apply intelligent layout
+  const layoutClasses = generateLayoutClasses(layoutConfig);
+
+  return (
+    <div className={layoutClasses}>
+      {components.map((component, index) => {
+        const responsiveClasses = getResponsiveClasses(layoutConfig, component.type || 'unknown');
+        return (
+          <div key={`component-${index}`} className={responsiveClasses}>
+            {renderNestedComponent(component, `layout-${index}`)}
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 export const CardTool = ({ 
@@ -270,12 +316,10 @@ export const CardTool = ({
           </div>
         )}
         
-        {/* Render nested components */}
+        {/* Render nested components with intelligent layout */}
         {components && Array.isArray(components) && components.length > 0 && (
-          <div className="space-y-6 w-full" style={{ minWidth: '100%', width: '100%' }}>
-            {components.map((component, index) => 
-              renderNestedComponent(component, `component-${index}`)
-            )}
+          <div className="w-full" style={{ minWidth: '100%', width: '100%' }}>
+            {renderComponentsWithLayout(components)}
           </div>
         )}
         

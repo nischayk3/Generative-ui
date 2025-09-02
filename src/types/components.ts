@@ -54,7 +54,7 @@ export interface TableColumn {
 export interface FormField {
   name: string;
   label: string;
-  type: "text" | "email" | "password" | "number" | "select" | "textarea" | "checkbox";
+  type: "text" | "email" | "password" | "number" | "select" | "textarea" | "checkbox" | "switch" | "radio";
   required?: boolean;
   options?: string[];
   placeholder?: string;

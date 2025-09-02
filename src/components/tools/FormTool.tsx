@@ -18,20 +18,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-
-interface FormField {
-  name: string;
-  label: string;
-  type: "text" | "email" | "password" | "textarea" | "select" | "checkbox" | "number";
-  required?: boolean;
-  placeholder?: string;
-  options?: string[];
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { FormField as FormFieldType } from "@/src/types/components";
 
 interface FormToolProps {
   title?: string;
   description?: string;
-  fields: FormField[];
+  fields: FormFieldType[];
   submitText?: string;
 }
 
@@ -40,7 +35,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
   const createSchema = () => {
     const schemaFields: Record<string, z.ZodTypeAny> = {};
     
-    fields.forEach(field => {
+    fields.forEach((field: FormFieldType) => {
       let validator: z.ZodTypeAny;
       
       switch (field.type) {
@@ -62,7 +57,24 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
         case "checkbox":
           validator = z.boolean().default(false);
           break;
-          
+
+        case "switch":
+          validator = z.boolean().default(false);
+          break;
+
+        case "radio":
+          validator = z.string();
+          if (field.required) {
+            validator = (validator as z.ZodString).min(1, `${field.label} is required`);
+          }
+          if (field.options && field.options.length > 0) {
+            validator = (validator as z.ZodString).refine(
+              (val) => field.options!.includes(val),
+              `Please select a valid ${field.label}`
+            );
+          }
+          break;
+
         default:
           validator = z.string();
           if (field.required) {
@@ -71,7 +83,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
           break;
       }
       
-      if (!field.required && field.type !== "checkbox") {
+      if (!field.required && field.type !== "checkbox" && field.type !== "switch") {
         validator = validator.optional();
       }
       
@@ -87,7 +99,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: fields.reduce((acc, field) => {
-      if (field.type === "checkbox") {
+      if (field.type === "checkbox" || field.type === "switch") {
         acc[field.name] = false as any;
       } else {
         acc[field.name] = "" as any;
@@ -115,7 +127,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
     );
   }
 
-    const renderField = (field: FormField, isFullWidth: boolean = false) => {
+    const renderField = (field: FormFieldType, isFullWidth: boolean = false) => {
     const itemClass = isFullWidth ? "col-span-full" : "col-span-1";
 
     switch (field.type) {
@@ -127,7 +139,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
             name={field.name}
             render={({ field: formField }) => (
               <FormItem className={itemClass}>
-                <FormLabel className="text-black">
+                <FormLabel className="text-black text-sm font-medium">
                   {field.label}
                   {field.required && <span className="text-red-500 ml-1">*</span>}
                 </FormLabel>
@@ -136,10 +148,10 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
                     placeholder={field.placeholder}
                     {...formField}
                     value={String(formField.value || '')}
-                    className="min-h-[100px]"
+                    className="min-h-[80px] text-sm"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -153,25 +165,25 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
             name={field.name}
             render={({ field: formField }) => (
               <FormItem className={itemClass}>
-                <FormLabel className="text-black">
+                <FormLabel className="text-black text-sm font-medium">
                   {field.label}
                   {field.required && <span className="text-red-500 ml-1">*</span>}
                 </FormLabel>
-                <FormControl>
-                  <select
-                    {...formField}
-                    value={String(formField.value || '')}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select {field.label}</option>
-                    {field.options?.map((option) => (
-                      <option key={option} value={option}>
+                <Select onValueChange={formField.onChange} defaultValue={formField.value as string}>
+                  <FormControl>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder={`Select ${field.label}`} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {field.options?.map((option: string) => (
+                      <SelectItem key={option} value={option}>
                         {option}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </FormControl>
-                <FormMessage />
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -203,6 +215,69 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
           />
         );
 
+      case "switch":
+        return (
+          <FormField
+            key={field.name}
+            control={form.control}
+            name={field.name}
+            render={({ field: formField }) => (
+              <FormItem className={`${itemClass} flex flex-row items-center justify-between rounded-lg border p-4`}>
+                <div className="space-y-0.5">
+                                  <FormLabel className="text-black text-sm font-medium">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </FormLabel>
+                  {field.placeholder && (
+                    <div className="text-sm text-muted-foreground">
+                      {field.placeholder}
+                    </div>
+                  )}
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={Boolean(formField.value)}
+                    onCheckedChange={formField.onChange}
+                  />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "radio":
+        return (
+          <FormField
+            key={field.name}
+            control={form.control}
+            name={field.name}
+            render={({ field: formField }) => (
+              <FormItem className={itemClass}>
+                <FormLabel className="text-black text-sm font-medium">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={formField.onChange}
+                    defaultValue={formField.value as string}
+                    className="flex flex-col space-y-2"
+                  >
+                    {field.options?.map((option: string) => (
+                      <div key={option} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option} id={`${field.name}-${option}`} />
+                        <Label htmlFor={`${field.name}-${option}`}>{option}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        );
+
       default:
         return (
           <FormField
@@ -211,7 +286,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
             name={field.name}
             render={({ field: formField }) => (
               <FormItem className={itemClass}>
-                <FormLabel className="text-black">
+                <FormLabel className="text-black text-sm font-medium">
                   {field.label}
                   {field.required && <span className="text-red-500 ml-1">*</span>}
                 </FormLabel>
@@ -221,9 +296,10 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
                     placeholder={field.placeholder}
                     {...formField}
                     value={String(formField.value || '')}
+                    className="h-9 text-sm"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -231,19 +307,23 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
     }
   };
 
-  // Group fields in pairs, but handle full-width fields (textarea, checkbox)
+  // Improved field grouping with better responsive layout
   const renderFieldGroups = () => {
     const groups: React.ReactElement[] = [];
-    let currentGroup: FormField[] = [];
+    let currentGroup: FormFieldType[] = [];
 
     fields.forEach((field, index) => {
-      const isFullWidth = field.type === 'textarea' || field.type === 'checkbox';
+      // Fields that should be full-width
+      const isFullWidth = field.type === 'textarea' || field.type === 'checkbox' || field.type === 'radio';
+
+      // Fields that work better in single column on smaller screens
+      const isSingleColumn = field.type === 'switch';
 
       if (isFullWidth) {
         // If we have a pending group, render it first
         if (currentGroup.length > 0) {
           groups.push(
-            <div key={`group-${groups.length}`} className="grid grid-cols-2 gap-4">
+            <div key={`group-${groups.length}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentGroup.map((groupField, groupIndex) => renderField(groupField, false))}
             </div>
           );
@@ -255,13 +335,29 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
             {renderField(field, true)}
           </div>
         );
+      } else if (isSingleColumn) {
+        // If we have a pending group, render it first
+        if (currentGroup.length > 0) {
+          groups.push(
+            <div key={`group-${groups.length}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {currentGroup.map((groupField, groupIndex) => renderField(groupField, false))}
+            </div>
+          );
+          currentGroup = [];
+        }
+        // Render single column field
+        groups.push(
+          <div key={`single-${index}`} className="w-full md:w-1/2">
+            {renderField(field, false)}
+          </div>
+        );
       } else {
         currentGroup.push(field);
 
         // If we have 2 fields or this is the last field, render the group
         if (currentGroup.length === 2 || index === fields.length - 1) {
           groups.push(
-            <div key={`group-${groups.length}`} className="grid grid-cols-2 gap-4">
+            <div key={`group-${groups.length}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentGroup.map((groupField, groupIndex) => renderField(groupField, false))}
             </div>
           );
@@ -283,11 +379,13 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
       </CardHeader>
       <CardContent className="w-full">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {renderFieldGroups()}
-            <Button type="submit" className="w-full">
-              {submitText}
-            </Button>
+            <div className="pt-4 border-t">
+              <Button type="submit" className="w-full h-9">
+                {submitText}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>
