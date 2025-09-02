@@ -185,7 +185,7 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
   "description": "Software Developer",
   "src": "https://example.com/avatar.jpg",
   "fallback": "JD",
-  "size": "default"
+  "size": "lg"
 }
 
 ### 6. Advanced Dashboard with Tabs
@@ -301,7 +301,7 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
       "description": "Product Manager",
       "src": "https://example.com/avatar.jpg",
       "fallback": "SJ",
-      "size": "large"
+      "size": "xl"
     },
     {
       "type": "card",

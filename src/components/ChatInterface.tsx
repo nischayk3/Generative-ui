@@ -1,33 +1,222 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDownIcon, InfoIcon } from "lucide-react";
-import { ChartTool } from "./tools/ChartTool";
-import { TableTool } from "./tools/TableTool";
-import { FormTool } from "./tools/FormTool";
-import { CardTool } from "./tools/CardTool";
-import { isComponentSupported, getComponentByType, getAvailableComponents } from "@/src/lib/componentRegistry";
+import { componentRegistry } from "@/src/lib/components/ComponentRegistry";
+import { DynamicRenderer } from "@/src/lib/components/DynamicRenderer";
+import { LayoutRenderer } from "@/src/lib/layout/LayoutRenderer";
+import { dashboardGenerator, GeneratedDashboard } from "@/src/lib/layout/DashboardGenerator";
+import { ComponentWithType } from "@/src/lib/layout/LayoutEngine";
+import { ComponentType } from "@/src/lib/components/schemas";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SkeletonLoader } from "./SkeletonLoader";
 
 interface ToolCall {
-  type: "form" | "chart" | "table" | "card" | "avatar";
-  data: any;
+  type: string;
+  data: ComponentType;
 }
+
+// Separate input component to prevent chat re-renders on typing
+const ChatInput = React.memo(({
+  input,
+  onInputChange,
+  onSubmit,
+  isLoading
+}: {
+  input: string;
+  onInputChange: (value: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
+}) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onInputChange(e.target.value);
+  }, [onInputChange]);
+
+  return (
+    <form onSubmit={onSubmit} className="p-4 border-t border-gray-200">
+      <div className="flex space-x-2">
+        <Input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Ask me to create charts, tables, forms, or cards..."
+          className="flex-1"
+          disabled={isLoading}
+        />
+        <Button type="submit" disabled={isLoading}>
+          Send
+        </Button>
+      </div>
+    </form>
+  );
+});
+
+ChatInput.displayName = 'ChatInput';
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   toolCalls?: ToolCall[];
+  dashboard?: GeneratedDashboard;
+  layoutComponents?: ComponentWithType[];
 }
 
-function ChatInterfaceInner() {
+// Separate component for rendering individual messages
+const MessageItem = React.memo(({
+  message,
+  loadingComponents,
+  renderedComponents,
+  onRenderComponent
+}: {
+  message: Message;
+  loadingComponents: Set<string>;
+  renderedComponents: Set<string>;
+  onRenderComponent: (toolCall: ToolCall, messageId: string) => React.ReactNode;
+}) => {
+  // Memoize expensive rendering functions to prevent child re-renders
+  const renderDashboard = useCallback((dashboard: GeneratedDashboard) => {
+    return (
+      <div className="mt-4 w-full">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">{dashboard.config.title}</h3>
+          <div className="flex items-center space-x-4 mt-2">
+            <span className="text-sm text-gray-600">
+              Layout: {dashboard.config.layout}
+            </span>
+            <span className="text-sm text-gray-600">
+              Components: {dashboard.metrics.totalComponents}
+            </span>
+            <span className="text-sm text-gray-600">
+              Efficiency: {Math.round(dashboard.metrics.layoutEfficiency)}%
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="dashboard-container"
+          style={{
+            gridTemplateAreas: dashboard.layout.gridTemplate,
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateRows: 'auto auto 1fr',
+            width: '100%',
+            minHeight: '100vh',
+            gap: '1.5rem',
+            padding: '1.5rem',
+          }}
+        >
+          {dashboard.components.map((component, index) => {
+            const gridArea = dashboard.layout.areas[component.type] || `area-${index}`;
+            const componentStyles = JSON.parse(dashboard.styles.components);
+            const componentClass = `${componentStyles[component.type] || 'p-4 bg-white rounded-lg shadow-sm'} dashboard-component`;
+            return (
+              <div
+                key={`${component.type}-${index}`}
+                className={componentClass}
+                style={{ 
+                  gridArea,
+                  width: '100%',
+                  height: '100%',
+                  minHeight: '200px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                <DynamicRenderer
+                  component={component as ComponentType}
+                  onError={(error, componentType) => {
+                    console.error(`Dashboard component error: ${componentType}`, error);
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }, []);
+
+  const renderLayoutComponents = useCallback((layoutComponents: ComponentWithType[]) => {
+    return (
+      <div className="mt-4 w-full">
+        <LayoutRenderer
+          components={layoutComponents as ComponentType[]}
+          layoutType="auto"
+          userPreferences={{
+            theme: 'light',
+            density: 'comfortable',
+          }}
+        />
+      </div>
+    );
+  }, []);
+
+  return (
+    <div
+      className={`flex ${
+        message.role === "user" ? "justify-end" : "justify-start"
+      }`}
+    >
+      <div
+        className={`${
+          message.role === "user"
+            ? "bg-blue-500 text-white max-w-xs"
+            : "bg-gray-100 text-black w-full max-w-none"
+        } rounded-lg p-3`}
+      >
+        <div className="whitespace-pre-wrap">
+          {message.role === "assistant"
+            ? (message.toolCalls && message.toolCalls.length > 0
+                ? "Generating your component..."
+                : "I've generated the component for you!")
+            : message.content
+          }
+        </div>
+
+        {/* Render components inline with AI response - FULL WIDTH */}
+        {message.role === "assistant" && (
+          <>
+            {/* Render individual tool calls */}
+            {message.toolCalls && message.toolCalls.length > 0 && (
+              <div className="mt-4 space-y-4 w-full">
+                {message.toolCalls.map((toolCall, index) => {
+                  const componentKey = `${message.id}-${toolCall.type}-${index}`;
+                  const isLoading = loadingComponents.has(componentKey);
+                  const isRendered = renderedComponents.has(componentKey);
+
+                  return (
+                    <div key={componentKey} className="w-full">
+                      {isLoading ? (
+                        <SkeletonLoader type={toolCall.type as any} />
+                      ) : isRendered ? (
+                        onRenderComponent(toolCall, message.id)
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Render dashboard if available */}
+            {message.dashboard && renderDashboard(message.dashboard)}
+
+            {/* Render layout components if available */}
+            {message.layoutComponents && message.layoutComponents.length > 0 &&
+              renderLayoutComponents(message.layoutComponents)}
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
+MessageItem.displayName = 'MessageItem';
+
+const ChatInterfaceInner = React.memo(() => {
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -39,47 +228,37 @@ function ChatInterfaceInner() {
   const [loadingComponents, setLoadingComponents] = useState<Set<string>>(new Set());
   const [renderedComponents, setRenderedComponents] = useState<Set<string>>(new Set());
 
+  // Memoize available components to prevent unnecessary recalculations
+  const availableComponents = useMemo(() => componentRegistry.getAllComponents(), []);
+
   // Prevent hydration errors by only rendering after mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // No artificial delay - components render immediately when ready
-
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <div className="h-screen flex flex-col max-w-6xl mx-auto bg-white">
-        <header className="border-b border-gray-200 p-4">
-          <h1 className="text-2xl font-bold text-black">HyperGen UI</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Generate interactive components with natural language
-          </p>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Define handleSubmit before any conditional returns to maintain hook order
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: "user",
+      role: "user" as const,
       content: input.trim()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Clear input immediately
     setInput("");
+
+    // Add user message and prepare messages for API
+    const currentMessages = [...messages, userMessage];
+    setMessages(prev => [...prev, userMessage]);
+
     setIsLoading(true);
     setProgress(10);
     setCurrentStatus("Analyzing your request...");
-    // Clear previous rendered components for new request
-    setRenderedComponents(new Set());
+    // Don't clear previous rendered components - preserve them
+    // setRenderedComponents(new Set());
     
     // Create assistant message ID early so it's accessible in catch block
     const assistantMessageId = (Date.now() + 1).toString();
@@ -91,7 +270,7 @@ function ChatInterfaceInner() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage]
+          messages: currentMessages
         }),
       });
 
@@ -110,16 +289,16 @@ function ChatInterfaceInner() {
       // Add initial assistant message with placeholder tool call to show shimmer immediately
       setMessages(prev => [...prev, {
         id: assistantMessageId,
-        role: "assistant",
+        role: "assistant" as const,
         content: "",
         toolCalls: [{
           type: "chart", // Placeholder type, will be updated with actual type
-          data: {}
+          data: { type: "chart" } as ComponentType
         }]
       }]);
       
       // Show shimmer immediately
-      setLoadingComponents(new Set([`${assistantMessageId}-chart`]));
+      setLoadingComponents(new Set([`${assistantMessageId}-chart-0`]));
 
       // Stream the response
       let chunkCount = 0;
@@ -184,7 +363,7 @@ function ChatInterfaceInner() {
                     
                     // Remove shimmer and render component immediately
                     setLoadingComponents(new Set());
-                    setRenderedComponents(new Set([`${assistantMessageId}-${toolCall.type}`]));
+                    setRenderedComponents(prev => new Set([...prev, `${assistantMessageId}-${toolCall.type}-0`]));
                     break;
                   }
                 }
@@ -224,13 +403,27 @@ function ChatInterfaceInner() {
       // Remove shimmer on error
       setLoadingComponents(new Set());
     }
-  };
+  }, [input, isLoading]);
 
-  const renderToolComponent = (toolCall: ToolCall, messageId?: string) => {
-    // Validate component type using registry
-    if (!isComponentSupported(toolCall.type)) {
-      const componentInfo = getComponentByType(toolCall.type);
-      const supportedTypes = ['chart', 'table', 'form', 'card', 'avatar'];
+  // Simplified input change handler
+  const handleInputChange = useCallback((value: string) => {
+    setInput(value);
+  }, []);
+
+  // Memoize success notification toggle
+  const toggleSuccess = useCallback(() => {
+    setShowSuccess(false);
+  }, []);
+
+  // Memoize help toggle
+  const toggleHelp = useCallback(() => {
+    setShowHelp(prev => !prev);
+  }, []);
+
+  const renderToolComponent = useCallback((toolCall: ToolCall, messageId?: string) => {
+    // Validate component type using new registry
+    if (!componentRegistry.isComponentAvailable(toolCall.type)) {
+      const componentInfo = componentRegistry.getComponent(toolCall.type);
 
       return (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 my-4">
@@ -240,12 +433,12 @@ function ChatInterfaceInner() {
               <h3 className="font-semibold text-yellow-800">Component Not Available</h3>
               <p className="text-sm text-yellow-700 mt-1">
                 {componentInfo
-                  ? `The "${componentInfo.name}" component is not yet implemented.`
+                  ? `The "${componentInfo.metadata.name}" component is not yet implemented.`
                   : `"${toolCall.type}" is not a recognized component type.`
                 }
               </p>
               <p className="text-xs text-yellow-600 mt-2">
-                Currently supported: {supportedTypes.join(', ')}
+                Available components: {availableComponents.map(c => c.metadata.type).join(', ')}
               </p>
             </div>
           </div>
@@ -253,37 +446,54 @@ function ChatInterfaceInner() {
       );
     }
 
-    switch (toolCall.type) {
-      case "chart":
-        return <ChartTool {...toolCall.data} />;
-      case "table":
-        return <TableTool {...toolCall.data} />;
-      case "form":
-        return <FormTool {...toolCall.data} />;
-      case "card":
-        return <CardTool {...toolCall.data} />;
-      case "avatar":
-        return (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 my-4 max-w-sm">
-            <div className="flex items-center space-x-4">
-              <div className="h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center">
-                {toolCall.data.fallback || '👤'}
-              </div>
-              {toolCall.data.name && (
-                <div>
-                  <h4 className="font-semibold text-black">{toolCall.data.name}</h4>
-                  {toolCall.data.description && (
-                    <p className="text-sm text-gray-600">{toolCall.data.description}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+    // Use dynamic renderer for all components
+    return (
+      <DynamicRenderer
+        component={toolCall.data}
+        onError={(error, componentType) => {
+          console.error(`Error rendering ${componentType}:`, error);
+        }}
+        onRender={(componentType, props) => {
+          console.log(`Successfully rendered ${componentType}`);
+        }}
+      />
+    );
+  }, [availableComponents]);
+
+  // Memoize stable props to prevent MessageItem re-renders
+  const stableMessageProps = useMemo(() => ({
+    loadingComponents,
+    renderedComponents,
+    onRenderComponent: renderToolComponent
+  }), [loadingComponents, renderedComponents, renderToolComponent]);
+
+  // Memoize rendered messages to prevent unnecessary re-renders
+  const renderedMessages = useMemo(() => {
+    return messages.map((message) => (
+      <MessageItem
+        key={message.id}
+        message={message}
+        {...stableMessageProps}
+      />
+    ));
+  }, [messages, stableMessageProps]);
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="h-screen flex flex-col max-w-6xl mx-auto bg-white">
+        <header className="border-b border-gray-200 p-4">
+          <h1 className="text-2xl font-bold text-black">HyperGen UI</h1>
+          <p className="text-gray-600 text-sm mt-1">
+            Generate interactive components with natural language
+          </p>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col max-w-6xl mx-auto bg-white">
@@ -307,17 +517,17 @@ function ChatInterfaceInner() {
           </Button>
         </div>
 
-        <Collapsible open={showHelp} onOpenChange={setShowHelp}>
+        <Collapsible open={showHelp} onOpenChange={toggleHelp}>
           <CollapsibleContent className="mt-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold text-blue-900 mb-3">Available Components</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {getAvailableComponents().map((component) => (
-                  <div key={component.type} className="bg-white rounded-md p-3 border">
-                    <h4 className="font-medium text-sm text-gray-900">{component.name}</h4>
-                    <p className="text-xs text-gray-600 mt-1">{component.description}</p>
+                {availableComponents.map((component) => (
+                  <div key={component.metadata.type} className="bg-white rounded-md p-3 border">
+                    <h4 className="font-medium text-sm text-gray-900">{component.metadata.name}</h4>
+                    <p className="text-xs text-gray-600 mt-1">{component.metadata.description}</p>
                     <span className="inline-block mt-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                      {component.category}
+                      {component.metadata.category}
                     </span>
                   </div>
                 ))}
@@ -345,52 +555,7 @@ function ChatInterfaceInner() {
         {/* Chat Section */}
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`${
-                    message.role === "user"
-                      ? "bg-blue-500 text-white max-w-xs"
-                      : "bg-gray-100 text-black w-full max-w-none"
-                  } rounded-lg p-3`}
-                >
-                  <div className="whitespace-pre-wrap">
-                    {message.role === "assistant"
-                      ? (message.toolCalls && message.toolCalls.length > 0 
-                          ? "Generating your component..." 
-                          : "I've generated the component for you!")
-                      : message.content
-                    }
-                  </div>
-                  
-                  {/* Render components inline with AI response - FULL WIDTH */}
-                  {message.role === "assistant" && message.toolCalls && message.toolCalls.length > 0 && (
-                    <div className="mt-4 space-y-4 w-full">
-                      {message.toolCalls.map((toolCall, index) => {
-                        const componentKey = `${message.id}-${toolCall.type}`;
-                        const isLoading = loadingComponents.has(componentKey);
-                        const isRendered = renderedComponents.has(componentKey);
-
-                        return (
-                          <div key={index} className="w-full">
-                            {isLoading ? (
-                              <SkeletonLoader type={toolCall.type} />
-                            ) : isRendered ? (
-                              renderToolComponent(toolCall, message.id)
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+            {renderedMessages}
             
             {isLoading && (
               <div className="flex justify-start">
@@ -416,30 +581,27 @@ function ChatInterfaceInner() {
             )}
           </div>
           
-          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-            <div className="flex space-x-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me to create charts, tables, forms, or cards..."
-                className="flex-1"
-                disabled={isLoading}
-              />
-              <Button type="submit" disabled={isLoading}>
-                Send
-              </Button>
-            </div>
-          </form>
+          <ChatInput
+            input={input}
+            onInputChange={handleInputChange}
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+          />
         </div>
       </div>
     </div>
   );
-}
+});
+
+ChatInterfaceInner.displayName = 'ChatInterfaceInner';
 
 export function ChatInterface() {
   return (
     <ErrorBoundary>
-      <ChatInterfaceInner />
+      <ChatInterfaceInner key="chat-interface-main" />
     </ErrorBoundary>
   );
 }
+
+// Add display name for debugging
+ChatInterfaceInner.displayName = 'ChatInterfaceInner';

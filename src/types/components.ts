@@ -54,10 +54,14 @@ export interface TableColumn {
 export interface FormField {
   name: string;
   label: string;
-  type: "text" | "email" | "password" | "number" | "select" | "textarea" | "checkbox" | "switch" | "radio";
+  type: "text" | "email" | "password" | "number" | "tel" | "url" | "textarea" | "select" | "checkbox" | "radio" | "switch" | "slider";
   required?: boolean;
   options?: string[];
   placeholder?: string;
+  value?: any;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export interface ComponentData {
