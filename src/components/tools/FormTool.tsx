@@ -324,7 +324,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
         if (currentGroup.length > 0) {
           groups.push(
             <div key={`group-${groups.length}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentGroup.map((groupField, groupIndex) => renderField(groupField, false))}
+              {currentGroup.map((groupField) => renderField(groupField, false))}
             </div>
           );
           currentGroup = [];
@@ -340,7 +340,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
         if (currentGroup.length > 0) {
           groups.push(
             <div key={`group-${groups.length}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentGroup.map((groupField, groupIndex) => renderField(groupField, false))}
+              {currentGroup.map((groupField) => renderField(groupField, false))}
             </div>
           );
           currentGroup = [];
@@ -358,7 +358,7 @@ export const FormTool = ({ title, description, fields, submitText = "Submit" }: 
         if (currentGroup.length === 2 || index === fields.length - 1) {
           groups.push(
             <div key={`group-${groups.length}`} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {currentGroup.map((groupField, groupIndex) => renderField(groupField, false))}
+              {currentGroup.map((groupField) => renderField(groupField, false))}
             </div>
           );
           currentGroup = [];

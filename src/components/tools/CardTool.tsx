@@ -39,11 +39,13 @@ interface CardField {
   icon?: string;
 }
 
+type CardComponent = CardSection | CardTabs | { type: string; [key: string]: unknown };
+
 interface CardSection {
   type: "section";
   title: string;
   fields?: CardField[];
-  components?: any[];
+  components?: CardComponent[];
   variant?: "default" | "info" | "success" | "warning";
 }
 
@@ -51,7 +53,7 @@ interface CardTabs {
   type: "tabs";
   tabs: Array<{
     title: string;
-    content: any[];
+    content: CardComponent[];
   }>;
 }
 

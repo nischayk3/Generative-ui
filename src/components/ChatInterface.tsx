@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronDownIcon, InfoIcon } from "lucide-react";
 import { componentRegistry } from "@/src/lib/components/ComponentRegistry";
 import { DynamicRenderer } from "@/src/lib/components/DynamicRenderer";
@@ -76,7 +76,7 @@ const MessageItem = React.memo(({
   message: Message;
   loadingComponents: Set<string>;
   renderedComponents: Set<string>;
-  onRenderComponent: (toolCall: ToolCall, messageId: string) => React.ReactNode;
+  onRenderComponent: (toolCall: ToolCall) => React.ReactNode;
 }) => {
   // Memoize expensive rendering functions to prevent child re-renders
   const renderDashboard = useCallback((dashboard: GeneratedDashboard) => {
@@ -189,9 +189,9 @@ const MessageItem = React.memo(({
                   return (
                     <div key={componentKey} className="w-full">
                       {isLoading ? (
-                        <SkeletonLoader type={toolCall.type as any} />
+                        <SkeletonLoader type={toolCall.type} />
                       ) : isRendered ? (
-                        onRenderComponent(toolCall, message.id)
+                        onRenderComponent(toolCall)
                       ) : null}
                     </div>
                   );
@@ -381,7 +381,7 @@ const ChatInterfaceInner = React.memo(() => {
                     break;
                   }
                 }
-              } catch (e) {
+              } catch {
                 continue;
               }
             }
@@ -417,24 +417,21 @@ const ChatInterfaceInner = React.memo(() => {
       // Remove shimmer on error
       setLoadingComponents(new Set());
     }
-  }, [input, isLoading]);
+  }, [input, isLoading, messages]);
 
   // Simplified input change handler
   const handleInputChange = useCallback((value: string) => {
     setInput(value);
   }, []);
 
-  // Memoize success notification toggle
-  const toggleSuccess = useCallback(() => {
-    setShowSuccess(false);
-  }, []);
+
 
   // Memoize help toggle
   const toggleHelp = useCallback(() => {
     setShowHelp(prev => !prev);
   }, []);
 
-  const renderToolComponent = useCallback((toolCall: ToolCall, messageId?: string) => {
+  const renderToolComponent = useCallback((toolCall: ToolCall) => {
     // Validate component type using new registry
     if (!componentRegistry.isComponentAvailable(toolCall.type)) {
       const componentInfo = componentRegistry.getComponent(toolCall.type);
@@ -467,7 +464,7 @@ const ChatInterfaceInner = React.memo(() => {
         onError={(error, componentType) => {
           console.error(`Error rendering ${componentType}:`, error);
         }}
-        onRender={(componentType, props) => {
+        onRender={(componentType) => {
           console.log(`Successfully rendered ${componentType}`);
         }}
       />
@@ -557,7 +554,7 @@ const ChatInterfaceInner = React.memo(() => {
                 ))}
               </div>
               <p className="text-sm text-blue-700 mt-3">
-                💡 Try asking: "Create a chart/table/form/card for..." or "Generate a dashboard showing..."
+                💡 Try asking: &ldquo;Create a chart/table/form/card for...&rdquo; or &ldquo;Generate a dashboard showing...&rdquo;
               </p>
             </div>
           </CollapsibleContent>

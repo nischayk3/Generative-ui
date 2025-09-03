@@ -39,48 +39,6 @@ export const TableTool = ({ title, description, columns, rows }: TableToolProps)
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Safety check: if no data provided, show a message
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return (
-      <Card className="w-full my-4">
-        <CardHeader>
-          <CardTitle className="text-black">{title || "Data Table"}</CardTitle>
-          {description && (
-            <p className="text-sm text-gray-600 mt-1">{description}</p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-gray-400 text-6xl mb-4">📊</div>
-            <p className="text-gray-600 text-lg">No data available to display</p>
-            <p className="text-gray-500 text-sm">Try adding some data to see the table</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Safety check: if no columns provided, show a message
-  if (!columns || !Array.isArray(columns) || columns.length === 0) {
-    return (
-      <Card className="w-full my-4">
-        <CardHeader>
-          <CardTitle className="text-black">{title || "Data Table"}</CardTitle>
-          {description && (
-            <p className="text-sm text-gray-600 mt-1">{description}</p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-gray-400 text-6xl mb-4">🔧</div>
-            <p className="text-gray-600 text-lg">No columns defined for the table</p>
-            <p className="text-gray-500 text-sm">Please define table columns to display data</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Filter data based on search term
   const filteredData = useMemo(() => {
     if (!searchTerm) return rows;
@@ -208,6 +166,48 @@ export const TableTool = ({ title, description, columns, rows }: TableToolProps)
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
+  // Safety check: if no data provided, show a message
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return (
+      <Card className="w-full my-4">
+        <CardHeader>
+          <CardTitle className="text-black">{title || "Data Table"}</CardTitle>
+          {description && (
+            <p className="text-sm text-gray-600 mt-1">{description}</p>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-gray-400 text-6xl mb-4">📊</div>
+            <p className="text-gray-600 text-lg">No data available to display</p>
+            <p className="text-gray-500 text-sm">Try adding some data to see the table</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Safety check: if no columns provided, show a message
+  if (!columns || !Array.isArray(columns) || columns.length === 0) {
+    return (
+      <Card className="w-full my-4">
+        <CardHeader>
+          <CardTitle className="text-black">{title || "Data Table"}</CardTitle>
+          {description && (
+            <p className="text-sm text-gray-600 mt-1">{description}</p>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-gray-400 text-6xl mb-4">🔧</div>
+            <p className="text-gray-600 text-lg">No columns defined for the table</p>
+            <p className="text-gray-500 text-sm">Please define table columns to display data</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-none my-4">
