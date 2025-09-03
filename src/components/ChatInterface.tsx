@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDownIcon, InfoIcon } from "lucide-react";
-import { componentRegistry } from "@/src/lib/components/ComponentRegistry";
+
 import { DynamicRenderer } from "@/src/lib/components/DynamicRenderer";
 import { LayoutRenderer } from "@/src/lib/layout/LayoutRenderer";
-import { dashboardGenerator, GeneratedDashboard } from "@/src/lib/layout/DashboardGenerator";
+import { componentRegistry } from "@/src/lib/components/ComponentRegistry";
+
 import { ComponentWithType } from "@/src/lib/layout/LayoutEngine";
 import { ComponentType } from "@/src/lib/components/schemas";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -62,7 +61,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   toolCalls?: ToolCall[];
-  dashboard?: GeneratedDashboard;
+
   layoutComponents?: ComponentWithType[];
 }
 
@@ -78,65 +77,7 @@ const MessageItem = React.memo(({
   renderedComponents: Set<string>;
   onRenderComponent: (toolCall: ToolCall) => React.ReactNode;
 }) => {
-  // Memoize expensive rendering functions to prevent child re-renders
-  const renderDashboard = useCallback((dashboard: GeneratedDashboard) => {
-    // Use adaptive grid classes instead of hardcoded styles
-    const getAdaptiveGridClasses = (componentCount: number): string => {
-      if (componentCount <= 1) return 'grid-cols-1';
-      if (componentCount <= 3) return 'grid-cols-1 md:grid-cols-2';
-      if (componentCount <= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
-      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-    };
 
-    return (
-      <div className="mt-4 w-full">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{dashboard.config.title}</h3>
-          <div className="flex items-center space-x-4 mt-2">
-            <span className="text-sm text-gray-600">
-              Layout: {dashboard.config.layout}
-            </span>
-            <span className="text-sm text-gray-600">
-              Components: {dashboard.metrics.totalComponents}
-            </span>
-            <span className="text-sm text-gray-600">
-              Efficiency: {Math.round(dashboard.metrics.layoutEfficiency)}%
-            </span>
-          </div>
-        </div>
-
-        {/* Use CSS Grid classes instead of inline styles for better responsiveness */}
-        <div className={`
-          dashboard-container
-          grid
-          ${getAdaptiveGridClasses(dashboard.components.length)}
-          gap-4 md:gap-6 lg:gap-8
-          w-full
-          min-h-screen
-          p-4 md:p-6 lg:p-8
-          auto-rows-fr
-        `}>
-          {dashboard.components.map((component, index) => {
-            const componentStyles = JSON.parse(dashboard.styles.components);
-            const componentClass = `${componentStyles[component.type] || 'p-4 bg-white rounded-lg shadow-sm border border-gray-200'} dashboard-component w-full h-full min-h-[200px] flex flex-col`;
-            return (
-              <div
-                key={`${component.type}-${index}`}
-                className={componentClass}
-              >
-                <DynamicRenderer
-                  component={component as ComponentType}
-                  onError={(error, componentType) => {
-                    console.error(`Dashboard component error: ${componentType}`, error);
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }, []);
 
   const renderLayoutComponents = useCallback((layoutComponents: ComponentWithType[]) => {
     return (
@@ -199,8 +140,7 @@ const MessageItem = React.memo(({
               </div>
             )}
 
-            {/* Render dashboard if available */}
-            {message.dashboard && renderDashboard(message.dashboard)}
+
 
             {/* Render layout components if available */}
             {message.layoutComponents && message.layoutComponents.length > 0 &&
@@ -222,28 +162,13 @@ const ChatInterfaceInner = React.memo(() => {
   const [progress, setProgress] = useState(0);
   const [currentStatus, setCurrentStatus] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+
   const [loadingComponents, setLoadingComponents] = useState<Set<string>>(new Set());
   const [renderedComponents, setRenderedComponents] = useState<Set<string>>(new Set());
 
-  // Memoize available components to prevent unnecessary recalculations
-  const availableComponents = useMemo(() => componentRegistry.getAllComponents(), []);
 
-  // Demo function for portfolio analytics dashboard
-  const generatePortfolioDemo = useCallback(() => {
-    const demoDashboard = dashboardGenerator.generatePortfolioDashboard([]);
-    
-    const demoMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant" as const,
-      content: "I've generated a professional portfolio analytics dashboard for you!",
-      dashboard: demoDashboard,
-    };
 
-    setMessages(prev => [...prev, demoMessage]);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  }, []);
+
 
   // Prevent hydration errors by only rendering after mount
   useEffect(() => {
@@ -426,10 +351,7 @@ const ChatInterfaceInner = React.memo(() => {
 
 
 
-  // Memoize help toggle
-  const toggleHelp = useCallback(() => {
-    setShowHelp(prev => !prev);
-  }, []);
+
 
   const renderToolComponent = useCallback((toolCall: ToolCall) => {
     // Validate component type using new registry
@@ -469,7 +391,7 @@ const ChatInterfaceInner = React.memo(() => {
         }}
       />
     );
-  }, [availableComponents]);
+  }, []);
 
   // Memoize stable props to prevent MessageItem re-renders
   const stableMessageProps = useMemo(() => ({
@@ -516,49 +438,10 @@ const ChatInterfaceInner = React.memo(() => {
               Generate interactive components with natural language
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generatePortfolioDemo}
-              className="flex items-center gap-2"
-            >
-              🚀 Portfolio Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowHelp(!showHelp)}
-              className="flex items-center gap-2"
-            >
-              <InfoIcon className="h-4 w-4" />
-              Components
-              <ChevronDownIcon className={`h-4 w-4 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
-            </Button>
-          </div>
+
         </div>
 
-        <Collapsible open={showHelp} onOpenChange={toggleHelp}>
-          <CollapsibleContent className="mt-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-3">Available Components</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {availableComponents.map((component) => (
-                  <div key={component.metadata.type} className="bg-white rounded-md p-3 border">
-                    <h4 className="font-medium text-sm text-gray-900">{component.metadata.name}</h4>
-                    <p className="text-xs text-gray-600 mt-1">{component.metadata.description}</p>
-                    <span className="inline-block mt-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                      {component.metadata.category}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-blue-700 mt-3">
-                💡 Try asking: &ldquo;Create a chart/table/form/card for...&rdquo; or &ldquo;Generate a dashboard showing...&rdquo;
-              </p>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+
       </header>
       
       <div className="flex-1 flex flex-col">
