@@ -231,6 +231,22 @@ const ChatInterfaceInner = React.memo(() => {
   // Memoize available components to prevent unnecessary recalculations
   const availableComponents = useMemo(() => componentRegistry.getAllComponents(), []);
 
+  // Demo function for portfolio analytics dashboard
+  const generatePortfolioDemo = useCallback(() => {
+    const demoDashboard = dashboardGenerator.generatePortfolioDashboard([]);
+    
+    const demoMessage: Message = {
+      id: Date.now().toString(),
+      role: "assistant" as const,
+      content: "I've generated a professional portfolio analytics dashboard for you!",
+      dashboard: demoDashboard,
+    };
+
+    setMessages(prev => [...prev, demoMessage]);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  }, []);
+
   // Prevent hydration errors by only rendering after mount
   useEffect(() => {
     setMounted(true);
@@ -505,16 +521,26 @@ const ChatInterfaceInner = React.memo(() => {
               Generate interactive components with natural language
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowHelp(!showHelp)}
-            className="flex items-center gap-2"
-          >
-            <InfoIcon className="h-4 w-4" />
-            Components
-            <ChevronDownIcon className={`h-4 w-4 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generatePortfolioDemo}
+              className="flex items-center gap-2"
+            >
+              🚀 Portfolio Demo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHelp(!showHelp)}
+              className="flex items-center gap-2"
+            >
+              <InfoIcon className="h-4 w-4" />
+              Components
+              <ChevronDownIcon className={`h-4 w-4 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+            </Button>
+          </div>
         </div>
 
         <Collapsible open={showHelp} onOpenChange={toggleHelp}>

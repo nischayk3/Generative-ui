@@ -155,34 +155,34 @@ export const CardRenderer: React.FC<CardRendererProps> = ({
   const getLayoutClasses = () => {
     switch (layout) {
       case 'grid':
-        return 'grid grid-cols-1 md:grid-cols-2 gap-4';
+        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full';
       case 'sidebar':
-        return 'flex flex-col md:flex-row';
+        return 'flex flex-col md:flex-row w-full';
       case 'dashboard':
-        return 'grid grid-cols-1 lg:grid-cols-3 gap-6';
+        return 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 w-full';
       default:
-        return '';
+        return 'w-full';
     }
   };
 
   return (
-    <Card className={`${getVariantClasses()} ${getLayoutClasses()} ${className || ''}`} {...props}>
+    <Card className={`${getVariantClasses()} ${getLayoutClasses()} ${className || ''} w-full h-full min-h-[200px]`} {...props}>
       {(title || description) && (
-        <CardHeader>
-          {title && <CardTitle>{title}</CardTitle>}
-          {description && <CardDescription>{description}</CardDescription>}
+        <CardHeader className="pb-4">
+          {title && <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>}
+          {description && <CardDescription className="text-sm text-gray-600">{description}</CardDescription>}
         </CardHeader>
       )}
 
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="space-y-4 flex-1">
           {renderContent()}
           {renderComponents()}
         </div>
       </CardContent>
 
       {renderFooter() && (
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 border-t border-gray-100 pt-4">
           {renderFooter()}
         </div>
       )}

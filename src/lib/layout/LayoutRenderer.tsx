@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactElement } from 'react';
+import React, { ReactElement, useMemo } from 'react';
 import { LayoutEngine, LayoutResult, ComponentWithType } from './LayoutEngine';
 import { ComponentType } from '../components/schemas';
 import { DynamicRenderer } from '../components/DynamicRenderer';
@@ -48,67 +48,154 @@ export const LayoutRenderer: React.FC<LayoutRendererProps> = ({
     return result;
   }, [components, layoutType, userPreferences, layoutEngine]);
 
-  const layoutResult = React.useMemo(() => {
+  const layoutResult = useMemo(() => {
     const result = generateLayout();
     onLayoutGenerated?.(result);
     return result;
   }, [generateLayout, onLayoutGenerated]);
 
-  // Generate CSS custom properties for grid areas
-  const generateGridStyles = () => {
-    const styles: Record<string, string> = {};
+  // Generate dynamic CSS grid based on component analysis
+  const generateDynamicGrid = () => {
+    const componentCount = components.length;
+    const hasCharts = components.some((c: ComponentType) => c.type === 'chart');
+    const hasTables = components.some((c: ComponentType) => c.type === 'table');
+    const hasCards = components.some((c: ComponentType) => c.type === 'card');
+    const hasForms = components.some((c: ComponentType) => c.type === 'form');
 
-    // Desktop styles
-    styles['--grid-template-areas'] = layoutResult.pattern.gridTemplate
-      .replace(/\n/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    // Determine optimal grid layout based on component types and count
+    let gridTemplateColumns = '1fr';
+    let gridTemplateRows = '';
+    let gridTemplateAreas = '';
 
-    // Mobile styles
-    if (layoutResult.pattern.breakpoints.mobile) {
-      styles['--grid-template-areas-mobile'] = layoutResult.pattern.breakpoints.mobile
-        .replace(/\n/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    if (componentCount <= 2) {
+      // For 1-2 components, use full width
+      gridTemplateColumns = '1fr';
+      gridTemplateRows = `repeat(${componentCount}, auto)`;
+      gridTemplateAreas = components.map((_, i) => `"component-${i}"`).join('\n');
+    } else if (componentCount <= 4) {
+      // For 3-4 components, use 2-column layout
+      gridTemplateColumns = '1fr 1fr';
+      const rows = Math.ceil(componentCount / 2);
+      gridTemplateRows = `repeat(${rows}, auto)`;
+      
+      let areas = '';
+      for (let i = 0; i < rows; i++) {
+        const start = i * 2;
+        const end = Math.min(start + 2, componentCount);
+        const rowAreas = Array.from({ length: 2 }, (_, j) => {
+          if (start + j < componentCount) {
+            return `component-${start + j}`;
+          }
+          return '.';
+        }).join(' ');
+        areas += `"${rowAreas}"\n`;
+      }
+      gridTemplateAreas = areas.trim();
+    } else if (componentCount <= 6) {
+      // For 5-6 components, use 3-column layout
+      gridTemplateColumns = '1fr 1fr 1fr';
+      const rows = Math.ceil(componentCount / 3);
+      gridTemplateRows = `repeat(${rows}, auto)`;
+      
+      let areas = '';
+      for (let i = 0; i < rows; i++) {
+        const start = i * 3;
+        const end = Math.min(start + 3, componentCount);
+        const rowAreas = Array.from({ length: 3 }, (_, j) => {
+          if (start + j < componentCount) {
+            return `component-${start + j}`;
+          }
+          return '.';
+        }).join(' ');
+        areas += `"${rowAreas}"\n`;
+      }
+      gridTemplateAreas = areas.trim();
+    } else {
+      // For 7+ components, use 4-column layout
+      gridTemplateColumns = '1fr 1fr 1fr 1fr';
+      const rows = Math.ceil(componentCount / 4);
+      gridTemplateRows = `repeat(${rows}, auto)`;
+      
+      let areas = '';
+      for (let i = 0; i < rows; i++) {
+        const start = i * 4;
+        const end = Math.min(start + 4, componentCount);
+        const rowAreas = Array.from({ length: 4 }, (_, j) => {
+          if (start + j < componentCount) {
+            return `component-${start + j}`;
+          }
+          return '.';
+        }).join(' ');
+        areas += `"${rowAreas}"\n`;
+      }
+      gridTemplateAreas = areas.trim();
     }
 
-    // Tablet styles
-    if (layoutResult.pattern.breakpoints.tablet) {
-      styles['--grid-template-areas-tablet'] = layoutResult.pattern.breakpoints.tablet
-        .replace(/\n/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    return styles;
+    return {
+      gridTemplateColumns,
+      gridTemplateRows,
+      gridTemplateAreas,
+    };
   };
 
-  const gridStyles = generateGridStyles();
+  const dynamicGrid = generateDynamicGrid();
+
+  // Generate responsive breakpoints
+  const responsiveStyles = useMemo(() => {
+    const componentCount = components.length;
+    const baseStyles = {
+      display: 'grid',
+      width: '100%',
+      minHeight: '100vh',
+      gap: '1.5rem',
+      padding: '1.5rem',
+      backgroundColor: '#f9fafb',
+      ...dynamicGrid,
+    };
+
+    return {
+      base: baseStyles,
+      mobile: {
+        ...baseStyles,
+        gridTemplateColumns: '1fr',
+        gap: '1rem',
+        padding: '1rem',
+      },
+      tablet: {
+        ...baseStyles,
+        gridTemplateColumns: componentCount <= 2 ? '1fr' : '1fr 1fr',
+        gap: '1.25rem',
+        padding: '1.25rem',
+      },
+      desktop: baseStyles,
+    };
+  }, [components.length, dynamicGrid]);
 
   return (
     <div
-      className={`${layoutResult.containerClasses} ${className || ''}`}
-      style={{
-        ...gridStyles,
-        gridTemplateAreas: 'var(--grid-template-areas, auto)',
-      }}
+      className={`dynamic-layout-container ${className || ''}`}
+      style={responsiveStyles.base}
     >
-      {layoutResult.componentLayouts.map((layout, index) => (
+      {components.map((component: ComponentType, index) => (
         <div
-          key={`${layout.component.type}-${index}`}
-          className="layout-item"
+          key={`${component.type}-${index}`}
+          className="dynamic-layout-item"
           style={{
-            gridArea: layout.gridArea,
-            ...parseLayoutClasses(layout.classes),
+            gridArea: `component-${index}`,
+            width: '100%',
+            height: '100%',
+            minHeight: '200px',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <DynamicRenderer
-            component={layout.component}
+            component={component}
             onError={(error, componentType) => {
               console.error(`Layout rendering error for ${componentType}:`, error);
             }}
             onRender={(componentType, props) => {
-              console.log(`Rendered ${componentType} in layout area: ${layout.gridArea}`);
+              console.log(`Rendered ${componentType} in dynamic layout area: component-${index}`);
             }}
           />
         </div>
@@ -116,25 +203,6 @@ export const LayoutRenderer: React.FC<LayoutRendererProps> = ({
     </div>
   );
 };
-
-// Utility function to parse layout classes into style object
-function parseLayoutClasses(classes: string): Record<string, string> {
-  const styles: Record<string, string> = {};
-  const classArray = classes.split(';').map(c => c.trim()).filter(c => c);
-
-  for (const classItem of classArray) {
-    if (classItem.includes(':')) {
-      const [property, value] = classItem.split(':').map(s => s.trim());
-      if (property && value) {
-        // Convert CSS property names
-        const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-        styles[cssProperty] = value;
-      }
-    }
-  }
-
-  return styles;
-}
 
 // Utility function to render components with automatic layout detection
 export const renderWithAutoLayout = (
@@ -157,7 +225,7 @@ export const renderWithAutoLayout = (
   );
 };
 
-// Higher-order component for layout-aware rendering - Simplified to fix type issues
+// Higher-order component for layout-aware rendering
 export const withLayout = <P extends object>(
   Component: React.ComponentType<P>,
   layoutOptions?: {
