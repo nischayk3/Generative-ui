@@ -165,92 +165,66 @@ export class DashboardGenerator {
     let responsive: Record<string, string> = {};
     let spaceOptimization = '';
 
-    // Professional layout with maximum space utilization
-    if (config.layout === 'professional' || config.layout === 'portfolio') {
-      const componentCount = components.length;
-      
-      if (componentCount <= 2) {
-        // Full-width layout for 1-2 components
-        gridTemplate = `
-          "component-0"
-          "component-1"
-        `.trim();
-        
-        components.forEach((_, index) => {
-          areas[`component-${index}`] = `component-${index}`;
-        });
-        
-        spaceOptimization = 'full-width-maximized';
-        
-      } else if (componentCount <= 4) {
-        // 2-column layout for 3-4 components
-        gridTemplate = `
-          "component-0 component-1"
-          "component-2 component-3"
-        `.trim();
-        
-        components.forEach((_, index) => {
-          areas[`component-${index}`] = `component-${index}`;
-        });
-        
-        spaceOptimization = 'two-column-balanced';
-        
-      } else if (componentCount <= 6) {
-        // 3-column layout for 5-6 components
-        gridTemplate = `
-          "component-0 component-1 component-2"
-          "component-3 component-4 component-5"
-        `.trim();
-        
-        components.forEach((_, index) => {
-          areas[`component-${index}`] = `component-${index}`;
-        });
-        
-        spaceOptimization = 'three-column-optimized';
-        
-      } else {
-        // 4-column layout for 7+ components
-        const rows = Math.ceil(componentCount / 4);
-        let template = '';
-        
-        for (let i = 0; i < rows; i++) {
-          const start = i * 4;
-          const end = Math.min(start + 4, componentCount);
+    // Adaptive layout with maximum space utilization - NO HARDCODED COLUMNS
+    const componentCount = components.length;
+
+    // Calculate optimal grid dimensions based on component count and types
+    const getOptimalGrid = (count: number, hasLargeComponents: boolean = false): { cols: number, rows: number } => {
+      if (count <= 1) return { cols: 1, rows: 1 };
+      if (count <= 2) return { cols: 1, rows: 2 }; // Stack vertically for better readability
+      if (count <= 4) return { cols: 2, rows: Math.ceil(count / 2) };
+      if (count <= 9) return { cols: 3, rows: Math.ceil(count / 3) };
+      return { cols: 4, rows: Math.ceil(count / 4) };
+    };
+
+    const { cols, rows } = getOptimalGrid(componentCount, analysis.hasCharts || analysis.hasTables);
+
+    // Generate adaptive grid template without empty spaces
+    let templateRows = [];
+    for (let i = 0; i < rows; i++) {
+      const start = i * cols;
+      const end = Math.min(start + cols, componentCount);
+      const rowComponents = [];
+
+      for (let j = start; j < end; j++) {
+        rowComponents.push(`component-${j}`);
+        areas[`component-${j}`] = `component-${j}`;
+      }
+
+      // Only add the row if it has components (no empty rows)
+      if (rowComponents.length > 0) {
+        templateRows.push(`"${rowComponents.join(' ')}"`);
+      }
+    }
+
+    gridTemplate = templateRows.join('\n');
+
+    // Adaptive responsive breakpoints
+    responsive = {
+      mobile: components.map((_, i) => `"component-${i}"`).join('\n'), // Single column on mobile
+      tablet: (() => {
+        const tabletCols = componentCount <= 2 ? 1 : 2;
+        const tabletRows = Math.ceil(componentCount / tabletCols);
+        let tabletTemplate = [];
+        for (let i = 0; i < tabletRows; i++) {
+          const start = i * tabletCols;
+          const end = Math.min(start + tabletCols, componentCount);
           const rowComponents = [];
-          
           for (let j = start; j < end; j++) {
             rowComponents.push(`component-${j}`);
           }
-          
-          // Fill remaining slots with empty areas
-          while (rowComponents.length < 4) {
-            rowComponents.push('.');
+          if (rowComponents.length > 0) {
+            tabletTemplate.push(`"${rowComponents.join(' ')}"`);
           }
-          
-          template += `"${rowComponents.join(' ')}"\n`;
         }
-        
-        gridTemplate = template.trim();
-        
-        components.forEach((_, index) => {
-          areas[`component-${index}`] = `component-${index}`;
-        });
-        
-        spaceOptimization = 'four-column-maximized';
-      }
+        return tabletTemplate.join('\n');
+      })(),
+      desktop: gridTemplate,
+    };
 
-      // Responsive breakpoints
-      responsive = {
-        mobile: components.map((_, i) => `"component-${i}"`).join('\n'),
-        tablet: componentCount <= 2 
-          ? components.map((_, i) => `"component-${i}"`).join('\n')
-          : componentCount <= 4
-          ? `"component-0 component-1"\n"component-2 component-3"`
-          : `"component-0 component-1 component-2"\n"component-3 component-4 component-5"`,
-        desktop: gridTemplate,
-      };
-      
-    } else if (config.layout === 'analytics') {
+    spaceOptimization = `${cols}-column-adaptive`;
+
+    if (config.layout === 'analytics') {
       // Analytics-focused layout
       gridTemplate = `
         "header header header header"
@@ -310,17 +284,25 @@ export class DashboardGenerator {
 
     const spacingStr = spacing[config.density];
 
-    // Dynamic grid styles based on space utilization
-    const grid = `
-      grid
-      w-full
-      h-full
-      ${config.spaceUtilization === 'maximize' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : ''}
-      ${config.spaceUtilization === 'balanced' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : ''}
-      ${config.spaceUtilization === 'minimal' ? 'grid-cols-1 md:grid-cols-2' : ''}
-      gap-4 md:gap-6 lg:gap-8
-      auto-rows-auto
-    `;
+    // Adaptive grid styles based on space utilization and component types
+    const getAdaptiveGrid = (utilization: string, hasLargeComponents: boolean = false): string => {
+      const baseClasses = 'grid w-full h-full gap-4 md:gap-6 lg:gap-8 auto-rows-fr';
+
+      switch (utilization) {
+        case 'maximize':
+          // Use auto-fit for maximum space utilization
+          return `${baseClasses} grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`;
+        case 'balanced':
+          // Balanced approach with reasonable column counts
+          return `${baseClasses} grid-cols-1 md:grid-cols-2 lg:grid-cols-3`;
+        case 'minimal':
+        default:
+          // Minimal columns for focused layouts
+          return `${baseClasses} grid-cols-1 md:grid-cols-2`;
+      }
+    };
+
+    const grid = getAdaptiveGrid(config.spaceUtilization, analysis.hasCharts || analysis.hasTables);
 
     // Professional component styles
     const components = JSON.stringify({

@@ -54,140 +54,42 @@ export const LayoutRenderer: React.FC<LayoutRendererProps> = ({
     return result;
   }, [generateLayout, onLayoutGenerated]);
 
-  // Generate dynamic CSS grid based on component analysis
-  const generateDynamicGrid = () => {
+  // Simplified adaptive grid generation
+  const generateAdaptiveGrid = () => {
     const componentCount = components.length;
-    const hasCharts = components.some((c: ComponentType) => c.type === 'chart');
-    const hasTables = components.some((c: ComponentType) => c.type === 'table');
-    const hasCards = components.some((c: ComponentType) => c.type === 'card');
-    const hasForms = components.some((c: ComponentType) => c.type === 'form');
 
-    // Determine optimal grid layout based on component types and count
-    let gridTemplateColumns = '1fr';
-    let gridTemplateRows = '';
-    let gridTemplateAreas = '';
-
-    if (componentCount <= 2) {
-      // For 1-2 components, use full width
-      gridTemplateColumns = '1fr';
-      gridTemplateRows = `repeat(${componentCount}, auto)`;
-      gridTemplateAreas = components.map((_, i) => `"component-${i}"`).join('\n');
-    } else if (componentCount <= 4) {
-      // For 3-4 components, use 2-column layout
-      gridTemplateColumns = '1fr 1fr';
-      const rows = Math.ceil(componentCount / 2);
-      gridTemplateRows = `repeat(${rows}, auto)`;
-      
-      let areas = '';
-      for (let i = 0; i < rows; i++) {
-        const start = i * 2;
-        const end = Math.min(start + 2, componentCount);
-        const rowAreas = Array.from({ length: 2 }, (_, j) => {
-          if (start + j < componentCount) {
-            return `component-${start + j}`;
-          }
-          return '.';
-        }).join(' ');
-        areas += `"${rowAreas}"\n`;
-      }
-      gridTemplateAreas = areas.trim();
-    } else if (componentCount <= 6) {
-      // For 5-6 components, use 3-column layout
-      gridTemplateColumns = '1fr 1fr 1fr';
-      const rows = Math.ceil(componentCount / 3);
-      gridTemplateRows = `repeat(${rows}, auto)`;
-      
-      let areas = '';
-      for (let i = 0; i < rows; i++) {
-        const start = i * 3;
-        const end = Math.min(start + 3, componentCount);
-        const rowAreas = Array.from({ length: 3 }, (_, j) => {
-          if (start + j < componentCount) {
-            return `component-${start + j}`;
-          }
-          return '.';
-        }).join(' ');
-        areas += `"${rowAreas}"\n`;
-      }
-      gridTemplateAreas = areas.trim();
-    } else {
-      // For 7+ components, use 4-column layout
-      gridTemplateColumns = '1fr 1fr 1fr 1fr';
-      const rows = Math.ceil(componentCount / 4);
-      gridTemplateRows = `repeat(${rows}, auto)`;
-      
-      let areas = '';
-      for (let i = 0; i < rows; i++) {
-        const start = i * 4;
-        const end = Math.min(start + 4, componentCount);
-        const rowAreas = Array.from({ length: 4 }, (_, j) => {
-          if (start + j < componentCount) {
-            return `component-${start + j}`;
-          }
-          return '.';
-        }).join(' ');
-        areas += `"${rowAreas}"\n`;
-      }
-      gridTemplateAreas = areas.trim();
-    }
+    // Adaptive column calculation based on component count and screen size considerations
+    const getGridColumns = (count: number): string => {
+      if (count <= 1) return 'grid-cols-1';
+      if (count <= 3) return 'grid-cols-1 md:grid-cols-2';
+      if (count <= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    };
 
     return {
-      gridTemplateColumns,
-      gridTemplateRows,
-      gridTemplateAreas,
+      gridClass: `${getGridColumns(componentCount)} gap-4 md:gap-6 lg:gap-8`,
+      componentCount,
     };
   };
 
-  const dynamicGrid = generateDynamicGrid();
+  const adaptiveGrid = generateAdaptiveGrid();
 
-  // Generate responsive breakpoints
+  // Simplified responsive styles
   const responsiveStyles = useMemo(() => {
-    const componentCount = components.length;
-    const baseStyles = {
-      display: 'grid',
-      width: '100%',
-      minHeight: '100vh',
-      gap: '1.5rem',
-      padding: '1.5rem',
-      backgroundColor: '#f9fafb',
-      ...dynamicGrid,
-    };
-
     return {
-      base: baseStyles,
-      mobile: {
-        ...baseStyles,
-        gridTemplateColumns: '1fr',
-        gap: '1rem',
-        padding: '1rem',
-      },
-      tablet: {
-        ...baseStyles,
-        gridTemplateColumns: componentCount <= 2 ? '1fr' : '1fr 1fr',
-        gap: '1.25rem',
-        padding: '1.25rem',
-      },
-      desktop: baseStyles,
+      container: `grid ${adaptiveGrid.gridClass} w-full min-h-screen p-4 md:p-6 lg:p-8 bg-gray-50`,
+      component: 'w-full h-full min-h-[200px]',
     };
-  }, [components.length, dynamicGrid]);
+  }, [adaptiveGrid]);
 
   return (
     <div
-      className={`dynamic-layout-container ${className || ''}`}
-      style={responsiveStyles.base}
+      className={`dynamic-layout-container ${responsiveStyles.container} ${className || ''}`}
     >
-      {components.map((component: ComponentType, index) => (
+      {components.map((component, index) => (
         <div
           key={`${component.type}-${index}`}
-          className="dynamic-layout-item"
-          style={{
-            gridArea: `component-${index}`,
-            width: '100%',
-            height: '100%',
-            minHeight: '200px',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          className={`dynamic-layout-item ${responsiveStyles.component} flex flex-col`}
         >
           <DynamicRenderer
             component={component}

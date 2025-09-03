@@ -80,6 +80,14 @@ const MessageItem = React.memo(({
 }) => {
   // Memoize expensive rendering functions to prevent child re-renders
   const renderDashboard = useCallback((dashboard: GeneratedDashboard) => {
+    // Use adaptive grid classes instead of hardcoded styles
+    const getAdaptiveGridClasses = (componentCount: number): string => {
+      if (componentCount <= 1) return 'grid-cols-1';
+      if (componentCount <= 3) return 'grid-cols-1 md:grid-cols-2';
+      if (componentCount <= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    };
+
     return (
       <div className="mt-4 w-full">
         <div className="mb-4">
@@ -97,34 +105,24 @@ const MessageItem = React.memo(({
           </div>
         </div>
 
-        <div
-          className="dashboard-container"
-          style={{
-            gridTemplateAreas: dashboard.layout.gridTemplate,
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gridTemplateRows: 'auto auto 1fr',
-            width: '100%',
-            minHeight: '100vh',
-            gap: '1.5rem',
-            padding: '1.5rem',
-          }}
-        >
+        {/* Use CSS Grid classes instead of inline styles for better responsiveness */}
+        <div className={`
+          dashboard-container
+          grid
+          ${getAdaptiveGridClasses(dashboard.components.length)}
+          gap-4 md:gap-6 lg:gap-8
+          w-full
+          min-h-screen
+          p-4 md:p-6 lg:p-8
+          auto-rows-fr
+        `}>
           {dashboard.components.map((component, index) => {
-            const gridArea = dashboard.layout.areas[component.type] || `area-${index}`;
             const componentStyles = JSON.parse(dashboard.styles.components);
-            const componentClass = `${componentStyles[component.type] || 'p-4 bg-white rounded-lg shadow-sm'} dashboard-component`;
+            const componentClass = `${componentStyles[component.type] || 'p-4 bg-white rounded-lg shadow-sm border border-gray-200'} dashboard-component w-full h-full min-h-[200px] flex flex-col`;
             return (
               <div
                 key={`${component.type}-${index}`}
                 className={componentClass}
-                style={{ 
-                  gridArea,
-                  width: '100%',
-                  height: '100%',
-                  minHeight: '200px',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
               >
                 <DynamicRenderer
                   component={component as ComponentType}

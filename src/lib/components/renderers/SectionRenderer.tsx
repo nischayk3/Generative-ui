@@ -11,6 +11,7 @@ export const SectionRenderer: React.FC<SectionProps> = ({
   content,
   fields,
   components,
+  layout = 'default',
   className,
   ...props
 }) => {
@@ -63,11 +64,30 @@ export const SectionRenderer: React.FC<SectionProps> = ({
     );
   };
 
+  const getLayoutClasses = () => {
+    const componentCount = components?.length || 0;
+
+    if (layout === 'grid' && componentCount > 0) {
+      const getAdaptiveGrid = (count: number): string => {
+        if (count <= 1) return 'grid-cols-1';
+        if (count <= 3) return 'grid-cols-1 md:grid-cols-2';
+        if (count <= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+        return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+      };
+
+      return `grid ${getAdaptiveGrid(componentCount)} gap-4`;
+    }
+
+    return '';
+  };
+
   const renderComponents = () => {
     if (!components || components.length === 0) return null;
 
+    const layoutClasses = getLayoutClasses();
+
     return (
-      <div className="space-y-4">
+      <div className={`space-y-4 ${layoutClasses}`}>
         {components.map((component: any, index: number) => {
           if (typeof component === 'object' && component.type) {
             return (

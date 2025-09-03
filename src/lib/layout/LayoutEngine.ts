@@ -210,46 +210,20 @@ export class LayoutEngine {
     // Generic Patterns - Improved space utilization
     this.patterns.set('grid-responsive', {
       name: 'Responsive Grid',
-      description: 'Generic responsive grid for mixed components',
-      gridTemplate: `
-        "auto auto auto auto"
-      `,
+      description: 'Adaptive grid that maximizes space utilization based on component count',
+      gridTemplate: '', // Will be generated dynamically
       componentMapping: {},
       breakpoints: {
-        mobile: '"auto"',
-        tablet: '"auto auto"',
-        desktop: '"auto auto auto auto"',
+        mobile: '1fr',
+        tablet: 'repeat(2, 1fr)',
+        desktop: 'repeat(auto-fit, minmax(300px, 1fr))',
+        large: 'repeat(auto-fit, minmax(350px, 1fr))',
       },
-      spacing: 'gap-4',
-      containerClasses: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-6 w-full min-h-screen',
+      spacing: 'gap-6',
+      containerClasses: 'grid p-6 w-full min-h-screen auto-rows-fr',
     });
 
-    this.patterns.set('sidebar-layout', {
-      name: 'Sidebar Layout',
-      description: 'Layout with sidebar navigation',
-      gridTemplate: `
-        "sidebar main main main"
-        "sidebar main main main"
-      `,
-      componentMapping: {
-        navigation: 'sidebar',
-        card: 'main',
-        table: 'main',
-        form: 'main',
-      },
-      breakpoints: {
-        mobile: `
-          "main"
-          "sidebar"
-        `,
-        tablet: `
-          "main main"
-          "sidebar sidebar"
-        `,
-      },
-      spacing: 'gap-0',
-      containerClasses: 'grid grid-cols-1 lg:grid-cols-4 min-h-screen w-full',
-    });
+    // Removed sidebar layout - no sidebar patterns needed
   }
 
   public analyzeContext(components: ComponentWithType[]): LayoutContext {
@@ -345,12 +319,8 @@ export class LayoutEngine {
       return this.patterns.get('data-table-focused')!;
     }
 
-    // Default patterns
-    if (context.componentCount <= 3) {
-      return this.patterns.get('grid-responsive')!;
-    }
-
-    return this.patterns.get('sidebar-layout')!;
+    // Default to responsive grid for optimal space utilization
+    return this.patterns.get('grid-responsive')!;
   }
 
   private assignGridArea(
@@ -417,17 +387,28 @@ export class LayoutEngine {
   private generateContainerClasses(pattern: LayoutPattern, context: LayoutContext): string {
     let classes = pattern.containerClasses;
 
-    // Add responsive grid styles
+    // Add responsive grid styles with dynamic column generation
     classes += ` ${pattern.spacing}`;
 
-    // Apply breakpoint-specific styles
-    if (context.screenSize === 'mobile' && pattern.breakpoints.mobile) {
-      classes += ' mobile:grid-template-areas-mobile';
-    } else if (context.screenSize === 'tablet' && pattern.breakpoints.tablet) {
-      classes += ' tablet:grid-template-areas-tablet';
-    } else {
-      classes += ' desktop:grid-template-areas-desktop';
-    }
+    // Generate adaptive grid columns based on component count and screen size
+    const getGridColumns = (screenSize: string, componentCount: number): string => {
+      switch (screenSize) {
+        case 'mobile':
+          return 'grid-cols-1';
+        case 'tablet':
+          return componentCount <= 2 ? 'grid-cols-1' : 'grid-cols-2';
+        case 'desktop':
+        case 'large':
+        default:
+          if (componentCount <= 1) return 'grid-cols-1';
+          if (componentCount <= 3) return 'grid-cols-2';
+          if (componentCount <= 6) return 'grid-cols-3';
+          return 'grid-cols-4';
+      }
+    };
+
+    const gridColsClass = getGridColumns(context.screenSize, context.componentCount);
+    classes += ` ${gridColsClass}`;
 
     return classes.trim();
   }

@@ -67,6 +67,7 @@ export const SectionSchema = BaseComponentSchema.extend({
   content: z.any().optional(),
   fields: z.array(z.any()).optional(), // Allow flexible field structure
   components: z.array(z.any()).optional(), // Allow nested components
+  layout: z.enum(['default', 'grid', 'compact']).optional(),
 });
 
 // Input Components

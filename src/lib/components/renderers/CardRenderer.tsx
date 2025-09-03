@@ -153,13 +153,38 @@ export const CardRenderer: React.FC<CardRendererProps> = ({
   };
 
   const getLayoutClasses = () => {
+    // Calculate adaptive grid based on component count for better space utilization
+    const getAdaptiveGrid = (componentCount: number = 0): string => {
+      if (componentCount <= 1) return 'grid-cols-1';
+      if (componentCount <= 3) return 'grid-cols-1 md:grid-cols-2';
+      if (componentCount <= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    };
+
+    const componentCount = components?.length || 0;
+
+    // For dashboard layout with nested components, let the nested components handle their own layout
+    // Don't apply grid to the card itself to prevent conflicts
+    if (layout === 'dashboard' && componentCount > 0) {
+      // Check if any nested component has its own layout that would conflict
+      const hasNestedLayout = components?.some(comp =>
+        comp && typeof comp === 'object' &&
+        (comp.layout === 'grid' || comp.layout === 'dashboard' || (comp.components && comp.components.length > 0))
+      );
+
+      if (hasNestedLayout) {
+        return 'w-full'; // Don't apply grid layout to avoid conflicts
+      }
+    }
+
     switch (layout) {
       case 'grid':
-        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full';
+        return `grid ${getAdaptiveGrid(componentCount)} gap-4 w-full`;
       case 'sidebar':
         return 'flex flex-col md:flex-row w-full';
       case 'dashboard':
-        return 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 w-full';
+        // Use adaptive grid for simple cases or when no nested layouts exist
+        return `grid ${getAdaptiveGrid(componentCount)} gap-6 w-full`;
       default:
         return 'w-full';
     }
