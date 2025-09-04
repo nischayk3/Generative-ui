@@ -14,10 +14,11 @@ export const ChartRenderer: React.FC<ChartProps> = ({
   data,
   options,
   className,
+  sparkline, // Add sparkline prop
   ...props
 }) => {
   // Add debugging
-  console.log('ChartRenderer props:', { title, chartType, data, options });
+  console.log('ChartRenderer props:', { title, chartType, data, options, sparkline });
   
   // Transform Chart.js format data to Recharts format
   const transformData = () => {
@@ -55,22 +56,26 @@ export const ChartRenderer: React.FC<ChartProps> = ({
       );
     }
 
+    const chartHeight = sparkline ? 60 : 300; // Reduced height for sparklines
+    const showAxisAndGrid = !sparkline;
+    const showTooltipAndLegend = !sparkline;
+
     switch (chartType) {
       case 'line':
         return (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+              {showAxisAndGrid && <CartesianGrid strokeDasharray="3 3" />}
+              {showAxisAndGrid && <XAxis dataKey="name" />}
+              {showAxisAndGrid && <YAxis />}
+              {showTooltipAndLegend && <Tooltip />}
+              {showTooltipAndLegend && <Legend />}
               <Line
                 type="monotone"
                 dataKey="value"
                 stroke="#8884d8"
-                strokeWidth={2}
-                dot={{ fill: '#8884d8' }}
+                strokeWidth={sparkline ? 1 : 2} // Thinner line for sparkline
+                dot={sparkline ? false : { fill: '#8884d8' }} // No dots for sparkline
               />
             </LineChart>
           </ResponsiveContainer>
@@ -78,15 +83,15 @@ export const ChartRenderer: React.FC<ChartProps> = ({
 
       case 'pie':
         return (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <PieChart>
               <Pie
                 data={chartData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={80}
+                label={sparkline ? false : ({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`} // No labels for sparkline
+                outerRadius={sparkline ? 20 : 80} // Smaller radius for sparkline
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -94,7 +99,7 @@ export const ChartRenderer: React.FC<ChartProps> = ({
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              {showTooltipAndLegend && <Tooltip />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -102,13 +107,13 @@ export const ChartRenderer: React.FC<ChartProps> = ({
       case 'bar':
       default:
         return (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+              {showAxisAndGrid && <CartesianGrid strokeDasharray="3 3" />}
+              {showAxisAndGrid && <XAxis dataKey="name" />}
+              {showAxisAndGrid && <YAxis />}
+              {showTooltipAndLegend && <Tooltip />}
+              {showTooltipAndLegend && <Legend />}
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
           </ResponsiveContainer>
@@ -118,7 +123,7 @@ export const ChartRenderer: React.FC<ChartProps> = ({
 
   return (
     <Card className={className} {...props}>
-      {(title || description) && (
+      {(!sparkline && (title || description)) && ( // Hide CardHeader if sparkline
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
           {description && <CardDescription>{description}</CardDescription>}

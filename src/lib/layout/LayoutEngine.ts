@@ -226,7 +226,7 @@ export class LayoutEngine {
     // Removed sidebar layout - no sidebar patterns needed
   }
 
-  public analyzeContext(components: ComponentWithType[]): LayoutContext {
+  public analyzeContext(components: ComponentWithType[], currentScreenSize: LayoutContext['screenSize']): LayoutContext {
     const componentTypes = components.map(c => c.type);
     const hasCharts = componentTypes.includes('chart');
     const hasTables = componentTypes.includes('table');
@@ -248,7 +248,7 @@ export class LayoutEngine {
 
     return {
       intent,
-      screenSize: 'desktop', // This could be detected from user agent
+      screenSize: currentScreenSize,
       componentCount: components.length,
       hasCharts,
       hasTables,
@@ -273,8 +273,8 @@ export class LayoutEngine {
       .sort((a, b) => (priority[b] || 0) - (priority[a] || 0));
   }
 
-  public generateLayout(components: ComponentWithType[]): LayoutResult {
-    const context = this.analyzeContext(components);
+  public generateLayout(components: ComponentWithType[], currentScreenSize: LayoutContext['screenSize']): LayoutResult {
+    const context = this.analyzeContext(components, currentScreenSize);
     const pattern = this.selectPattern(context);
 
     const componentLayouts = components.map((component, index) => {

@@ -369,6 +369,24 @@ Remember: You are building professional-grade UIs that rival the quality of Thes
           ],
         },
       },
+      {
+        request: 'Generate a two-column contact form',
+        response: {
+          type: 'form',
+          title: 'Contact Information',
+          description: 'Please fill out your details',
+          layout: 'grid',
+          fields: [
+            {"name": "firstName", "label": "First Name", "type": "text", "required": true, "placeholder": "Enter your first name"},
+            {"name": "lastName", "label": "Last Name", "type": "text", "required": true, "placeholder": "Enter your last name"},
+            {"name": "email", "label": "Email Address", "type": "email", "required": true, "placeholder": "your.email@example.com"},
+            {"name": "phone", "label": "Phone Number", "type": "tel", "required": false, "placeholder": "Enter your phone number"},
+            {"name": "message", "label": "Message", "type": "textarea', "required": true, "placeholder": "Your message..."},
+            {"name": "subscribe", "label": "Subscribe to newsletter", "type": "checkbox", "required": false}
+          ],
+          submitText: 'Send Message'
+        }
+      },
     ];
 
     let examplesText = '';

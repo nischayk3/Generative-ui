@@ -21,8 +21,8 @@ export const CardSchema: z.ZodSchema = BaseComponentSchema.extend({
 
 export const AccordionSchema = BaseComponentSchema.extend({
   type: z.literal('accordion'),
-  items: z.array(z.object({
-    id: z.string(),
+  sections: z.array(z.object({
+    id: z.string().optional(), // Make id optional as it might not always be provided by AI
     title: z.string(),
     content: z.unknown(),
     disabled: z.boolean().optional(),
@@ -332,6 +332,7 @@ export const ChartSchema = BaseComponentSchema.extend({
     })),
   }),
   options: z.record(z.string(), z.unknown()).optional(),
+  sparkline: z.boolean().optional(), // Add sparkline prop
 });
 
 // Form Component
@@ -533,3 +534,4 @@ export type ChartProps = z.infer<typeof ChartSchema>;
 export type TabsProps = z.infer<typeof TabsSchema>;
 export type SectionProps = z.infer<typeof SectionSchema>;
 export type AvatarProps = z.infer<typeof AvatarSchema>;
+export type AccordionProps = z.infer<typeof AccordionSchema>;

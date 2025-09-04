@@ -81,7 +81,7 @@ export const TableRenderer: React.FC<TableProps> = ({
       )}
 
       <CardContent>
-        <div className="rounded-md border">
+        <div className="rounded-md border w-full">
           <Table>
             <TableHeader>
               <TableRow>

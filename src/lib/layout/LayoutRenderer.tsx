@@ -1,9 +1,34 @@
 "use client";
 
-import React, { ReactElement, useMemo } from 'react';
+import React, { ReactElement, useMemo, useState, useEffect, useCallback } from 'react';
 import { LayoutEngine, LayoutResult, ComponentWithType } from './LayoutEngine';
 import { ComponentType } from '../components/schemas';
 import { DynamicRenderer } from '../components/DynamicRenderer';
+
+const useScreenSize = () => {
+  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop' | 'large'>('desktop');
+
+  const updateScreenSize = useCallback(() => {
+    const width = window.innerWidth;
+    if (width < 768) {
+      setScreenSize('mobile');
+    } else if (width >= 768 && width < 1024) {
+      setScreenSize('tablet');
+    } else if (width >= 1024 && width < 1440) {
+      setScreenSize('desktop');
+    } else {
+      setScreenSize('large');
+    }
+  }, []);
+
+  useEffect(() => {
+    updateScreenSize(); // Set initial size
+    window.addEventListener('resize', updateScreenSize);
+    return () => window.removeEventListener('resize', updateScreenSize);
+  }, [updateScreenSize]);
+
+  return screenSize;
+};
 
 interface LayoutRendererProps {
   components: ComponentType[];
@@ -13,6 +38,7 @@ interface LayoutRendererProps {
     density?: 'compact' | 'comfortable' | 'spacious';
     reduceMotion?: boolean;
     highContrast?: boolean;
+    screenSize?: 'mobile' | 'tablet' | 'desktop' | 'large';
   };
   className?: string;
   onLayoutGenerated?: (layout: LayoutResult) => void;
@@ -26,18 +52,19 @@ export const LayoutRenderer: React.FC<LayoutRendererProps> = ({
   onLayoutGenerated,
 }) => {
   const layoutEngine = LayoutEngine.getInstance();
+  const currentScreenSize = useScreenSize();
 
   // Generate layout based on components and preferences
   const generateLayout = React.useCallback(() => {
     let result: LayoutResult;
 
     if (layoutType === 'auto') {
-      result = layoutEngine.generateLayout(components as ComponentWithType[]);
+      result = layoutEngine.generateLayout(components as ComponentWithType[], currentScreenSize);
     } else {
       // Force specific layout type by modifying context
-      const context = layoutEngine.analyzeContext(components as ComponentWithType[]);
+      const context = layoutEngine.analyzeContext(components as ComponentWithType[], currentScreenSize);
       context.intent = layoutType as any;
-      result = layoutEngine.generateLayout(components as ComponentWithType[]);
+      result = layoutEngine.generateLayout(components as ComponentWithType[], currentScreenSize);
     }
 
     // Optimize layout with user preferences
@@ -46,7 +73,7 @@ export const LayoutRenderer: React.FC<LayoutRendererProps> = ({
     }
 
     return result;
-  }, [components, layoutType, userPreferences, layoutEngine]);
+  }, [components, layoutType, userPreferences, layoutEngine, currentScreenSize]);
 
   const layoutResult = useMemo(() => {
     const result = generateLayout();
@@ -54,50 +81,23 @@ export const LayoutRenderer: React.FC<LayoutRendererProps> = ({
     return result;
   }, [generateLayout, onLayoutGenerated]);
 
-  // Simplified adaptive grid generation
-  const generateAdaptiveGrid = () => {
-    const componentCount = components.length;
-
-    // Adaptive column calculation based on component count and screen size considerations
-    const getGridColumns = (count: number): string => {
-      if (count <= 1) return 'grid-cols-1';
-      if (count <= 3) return 'grid-cols-1 md:grid-cols-2';
-      if (count <= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
-      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-    };
-
-    return {
-      gridClass: `${getGridColumns(componentCount)} gap-4 md:gap-6 lg:gap-8`,
-      componentCount,
-    };
-  };
-
-  const adaptiveGrid = generateAdaptiveGrid();
-
-  // Simplified responsive styles
-  const responsiveStyles = useMemo(() => {
-    return {
-      container: `grid ${adaptiveGrid.gridClass} w-full min-h-screen p-4 md:p-6 lg:p-8 bg-gray-50`,
-      component: 'w-full h-full min-h-[200px]',
-    };
-  }, [adaptiveGrid]);
-
   return (
     <div
-      className={`dynamic-layout-container ${responsiveStyles.container} ${className || ''}`}
+      className={`dynamic-layout-container ${layoutResult.containerClasses} ${className || ''}`}
+      style={layoutResult.pattern.gridTemplate ? { gridTemplateAreas: layoutResult.pattern.gridTemplate } : undefined}
     >
-      {components.map((component, index) => (
+      {layoutResult.componentLayouts.map((layoutItem, index) => (
         <div
-          key={`${component.type}-${index}`}
-          className={`dynamic-layout-item ${responsiveStyles.component} flex flex-col`}
+          key={`${layoutItem.component.type}-${index}`}
+          className={`dynamic-layout-item ${layoutItem.classes} flex flex-col`}
         >
           <DynamicRenderer
-            component={component}
+            component={layoutItem.component}
             onError={(error, componentType) => {
               console.error(`Layout rendering error for ${componentType}:`, error);
             }}
             onRender={(componentType, props) => {
-              console.log(`Rendered ${componentType} in dynamic layout area: component-${index}`);
+              console.log(`Rendered ${componentType} in dynamic layout area: ${layoutItem.gridArea}`);
             }}
           />
         </div>

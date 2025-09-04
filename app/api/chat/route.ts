@@ -165,6 +165,7 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
   "type": "form",
   "title": "User Registration Form",
   "description": "Complete your profile information",
+   "layout": "grid",
   "fields": [
     {"name": "fullName", "label": "Full Name", "type": "text", "required": true},
     {"name": "email", "label": "Email Address", "type": "email", "required": true},
@@ -253,6 +254,7 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
   "type": "form",
   "title": "User Registration",
   "description": "Create your account with validation",
+   "layout": "grid",
   "fields": [
     {"name": "firstName", "label": "First Name", "type": "text", "required": true, "placeholder": "Enter your first name"},
     {"name": "lastName", "label": "Last Name", "type": "text", "required": true, "placeholder": "Enter your last name"},
@@ -271,12 +273,8 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
   "type": "form",
   "title": "Address Change Form",
   "description": "Update your current and new addresses",
+   "layout": "grid",
   "fields": [
-    {"name": "currentAddress", "label": "Current Address", "type": "textarea", "required": true, "placeholder": "Enter your current address"},
-    {"name": "currentCity", "label": "Current City", "type": "text", "required": true, "placeholder": "Enter current city"},
-    {"name": "currentState", "label": "Current State", "type": "text", "required": true, "placeholder": "Enter current state"},
-    {"name": "currentPostalCode", "label": "Current Postal Code", "type": "text", "required": true, "placeholder": "Enter current postal code"},
-    {"name": "currentCountry", "label": "Current Country", "type": "text", "required": true, "placeholder": "Enter current country"},
     {"name": "newAddress", "label": "New Address", "type": "textarea", "required": true, "placeholder": "Enter your new address"},
     {"name": "newCity", "label": "New City", "type": "text", "required": true, "placeholder": "Enter new city"},
     {"name": "newState", "label": "New State", "type": "text", "required": true, "placeholder": "Enter new state"},
@@ -286,6 +284,23 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
     {"name": "notifications", "label": "Receive notifications about this change", "type": "checkbox", "required": false}
   ],
   "submitText": "Submit Address Change"
+}
+
+### 7c. Two-Column Contact Form
+{
+  "type": "form",
+  "title": "Contact Information",
+  "description": "Please fill out your details",
+  "layout": "grid",
+  "fields": [
+    {"name": "firstName", "label": "First Name", "type": "text", "required": true, "placeholder": "Enter your first name"},
+    {"name": "lastName", "label": "Last Name", "type": "text", "required": true, "placeholder": "Enter your last name"},
+    {"name": "email", "label": "Email Address", "type": "email", "required": true, "placeholder": "your.email@example.com"},
+    {"name": "phone", "label": "Phone Number", "type": "tel", "required": false, "placeholder": "Enter your phone number"},
+    {"name": "message", "label": "Message", "type": "textarea", "required": true, "placeholder": "Your message..."},
+    {"name": "subscribe", "label": "Subscribe to newsletter", "type": "checkbox", "required": false}
+  ],
+  "submitText": "Send Message"
 }
 
 ### 8. Profile Card with Avatar
@@ -448,6 +463,7 @@ Do NOT include explanatory text before or after the JSON. The JSON should be the
 - **Dropdown options**: Always include "options" array for "select" and "radio"
 - **Placeholders**: Add helpful "placeholder" text for user guidance
 - **Field names**: Use camelCase for consistent naming
+- **Field Count**: Strictly adhere to the requested number of fields. If a specific count is given (e.g., "in 5 fields"), generate exactly that many.
 
 ## 🎨 DESIGN PATTERNS:
 

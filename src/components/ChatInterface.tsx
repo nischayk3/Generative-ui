@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -18,6 +18,8 @@ import { SkeletonLoader } from "./SkeletonLoader";
 interface ToolCall {
   type: string;
   data: ComponentType;
+  isLoading?: boolean;
+  isRendered?: boolean;
 }
 
 // Separate input component to prevent chat re-renders on typing
@@ -68,13 +70,9 @@ interface Message {
 // Separate component for rendering individual messages
 const MessageItem = React.memo(({
   message,
-  loadingComponents,
-  renderedComponents,
   onRenderComponent
 }: {
   message: Message;
-  loadingComponents: Set<string>;
-  renderedComponents: Set<string>;
   onRenderComponent: (toolCall: ToolCall) => React.ReactNode;
 }) => {
 
@@ -123,12 +121,12 @@ const MessageItem = React.memo(({
             {message.toolCalls && message.toolCalls.length > 0 && (
               <div className="mt-4 space-y-4 w-full">
                 {message.toolCalls.map((toolCall, index) => {
-                  const componentKey = `${message.id}-${toolCall.type}-${index}`;
-                  const isLoading = loadingComponents.has(componentKey);
-                  const isRendered = renderedComponents.has(componentKey);
+                  const isLoading = toolCall.isLoading;
+                  const isRendered = toolCall.isRendered;
+                  const key = `${message.id}-${toolCall.type}-${index}`;
 
                   return (
-                    <div key={componentKey} className="w-full">
+                    <div key={key} className="w-full">
                       {isLoading ? (
                         <SkeletonLoader type={toolCall.type} />
                       ) : isRendered ? (
@@ -154,6 +152,27 @@ const MessageItem = React.memo(({
 
 MessageItem.displayName = 'MessageItem';
 
+const detailedDashboardPrompt = `Generate a comprehensive portfolio analytics dashboard.
+
+At the top, create a section with the title "Portfolio Analytics Dashboard" and a description "Overview of performance, allocation, and risk metrics. A concise view of your portfolio KPIs, recent performance, allocation breakdowns, and actionable insights."
+
+Below this, create four distinct summary cards arranged in a grid:
+1.  **Card 1 (Total Value):** Display "$128.4k" as the main value and "Total Value" as the label. Include a small line chart sparkline showing a positive trend. Add a document icon.
+2.  **Card 2 (YTD Return):** Display "+11.2%" as the main value and "YTD Return" as the label. Include a small area chart sparkline showing an upward trend. Add a chart icon.
+3.  **Card 3 (Sharpe Ratio):** Display "0.92" as the main value and "Sharpe Ratio" as the label. Include a small bar chart sparkline. Add a refresh icon.
+4.  **Card 4 (Holdings):** Display "12" as the main value and "Holdings" as the label. Include a small bar chart sparkline. Add a grid icon.
+
+Below the summary cards, create a large line chart titled "Equity Curve" showing "Last 12 months" performance. The chart should display "Portfolio Value" over months (Jan-Jun).
+
+To the right of the main chart, create a summary section with the title "Summary Key highlights". Inside this section, list the following key highlights as bullet points:
+- Outperformed benchmark by 2.3% YTD
+- Risk-adjusted returns improving for 3 months
+- Cash buffer at 6% for flexibility
+
+Below the bullet points in the summary section, add two buttons: "Rebalance" and "Add Funds".
+
+Ensure the dashboard uses a dark theme and leverages shadcn/ui components for a professional and modern look.`;
+
 const ChatInterfaceInner = React.memo(() => {
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -163,11 +182,13 @@ const ChatInterfaceInner = React.memo(() => {
   const [currentStatus, setCurrentStatus] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const [loadingComponents, setLoadingComponents] = useState<Set<string>>(new Set());
-  const [renderedComponents, setRenderedComponents] = useState<Set<string>>(new Set());
+  
 
+  const messagesRef = useRef<Message[]>([]);
 
-
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
 
   // Prevent hydration errors by only rendering after mount
@@ -186,22 +207,36 @@ const ChatInterfaceInner = React.memo(() => {
       content: input.trim()
     };
 
-    // Clear input immediately
+    // Check for trigger phrase and expand prompt
+    if (userMessage.content.toLowerCase().includes("generate a professional dashboard")) {
+      userMessage.content = detailedDashboardPrompt;
+    }
+
     setInput("");
 
-    // Add user message and prepare messages for API
-    const currentMessages = [...messages, userMessage];
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prevMessages => [...prevMessages, userMessage]);
 
     setIsLoading(true);
     setProgress(10);
     setCurrentStatus("Analyzing your request...");
-    // Don't clear previous rendered components - preserve them
-    // setRenderedComponents(new Set());
     
-    // Create assistant message ID early so it's accessible in catch block
     const assistantMessageId = (Date.now() + 1).toString();
+    let assistantMessageContent = "";
+    const detectedToolCalls: ToolCall[] = [];
 
+    // Add initial assistant message with placeholder tool call to show shimmer immediately
+    setMessages(prevMessages => [...prevMessages, {
+      id: assistantMessageId,
+      role: "assistant" as const,
+      content: "",
+      toolCalls: [{
+        type: "chart", // Placeholder type, will be updated with actual type
+        data: { type: "chart" } as ComponentType,
+        isLoading: true, // Mark as loading
+        isRendered: false,
+      }]
+    }]);
+    
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -209,7 +244,7 @@ const ChatInterfaceInner = React.memo(() => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: currentMessages
+          messages: [...messagesRef.current, userMessage]
         }),
       });
 
@@ -222,24 +257,6 @@ const ChatInterfaceInner = React.memo(() => {
         throw new Error("No response body");
       }
 
-      let assistantMessage = "";
-      const detectedToolCalls: ToolCall[] = [];
-
-      // Add initial assistant message with placeholder tool call to show shimmer immediately
-      setMessages(prev => [...prev, {
-        id: assistantMessageId,
-        role: "assistant" as const,
-        content: "",
-        toolCalls: [{
-          type: "chart", // Placeholder type, will be updated with actual type
-          data: { type: "chart" } as ComponentType
-        }]
-      }]);
-      
-      // Show shimmer immediately
-      setLoadingComponents(new Set([`${assistantMessageId}-chart-0`]));
-
-      // Stream the response
       let chunkCount = 0;
       while (true) {
         const { done, value } = await reader.read();
@@ -247,9 +264,8 @@ const ChatInterfaceInner = React.memo(() => {
 
         chunkCount++;
         const chunk = new TextDecoder().decode(value);
-        assistantMessage += chunk;
+        assistantMessageContent += chunk;
 
-        // Update progress and status based on streaming
         if (chunkCount === 1) {
           setProgress(30);
           setCurrentStatus("Generating component structure...");
@@ -261,16 +277,10 @@ const ChatInterfaceInner = React.memo(() => {
           setCurrentStatus("Finalizing your component...");
         }
 
-        // Don't update message content with raw streaming JSON
-        // We only need to parse it for tool calls, not display it
-
-        // Check for tool calls in the response - simplified and robust
         try {
           const supportedTypes = ["form", "chart", "table", "card", "avatar"];
-
-          // Look for JSON code blocks
           const codeBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g;
-          const codeBlockMatches = assistantMessage.match(codeBlockRegex);
+          const codeBlockMatches = assistantMessageContent.match(codeBlockRegex);
 
           if (codeBlockMatches) {
             for (const match of codeBlockMatches) {
@@ -279,31 +289,28 @@ const ChatInterfaceInner = React.memo(() => {
                 const potentialToolCall = JSON.parse(jsonContent);
 
                 if (potentialToolCall.type && supportedTypes.includes(potentialToolCall.type)) {
-                  const toolCall: ToolCall = {
+                  const newToolCall: ToolCall = {
                     type: potentialToolCall.type,
-                    data: potentialToolCall
+                    data: potentialToolCall,
+                    isLoading: false, // No longer loading
+                    isRendered: true, // Now rendered
                   };
 
-                  // Check for duplicates
                   const isDuplicate = detectedToolCalls.some(tc =>
-                    tc.type === toolCall.type &&
-                    JSON.stringify(tc.data) === JSON.stringify(toolCall.data)
+                    tc.type === newToolCall.type &&
+                    JSON.stringify(tc.data) === JSON.stringify(newToolCall.data)
                   );
 
                   if (!isDuplicate) {
-                    detectedToolCalls.push(toolCall);
+                    detectedToolCalls.push(newToolCall);
                     
-                    // Update the message with actual tool calls
-                    setMessages(prev => prev.map(msg =>
+                    setMessages(prevMessages => prevMessages.map(msg =>
                       msg.id === assistantMessageId
                         ? { ...msg, toolCalls: [...detectedToolCalls] }
                         : msg
                     ));
                     
-                    // Remove shimmer and render component immediately
-                    setLoadingComponents(new Set());
-                    setRenderedComponents(prev => new Set([...prev, `${assistantMessageId}-${toolCall.type}-0`]));
-                    break;
+                    break; // Keep break for now to avoid multiple setMessages calls per stream
                   }
                 }
               } catch {
@@ -318,11 +325,16 @@ const ChatInterfaceInner = React.memo(() => {
 
       reader.releaseLock();
 
-      // Completion
+      setMessages(prevMessages => prevMessages.map(msg =>
+        msg.id === assistantMessageId
+          ? { ...msg, content: assistantMessageContent.trim() }
+          : msg
+      ));
+
       setProgress(100);
       setCurrentStatus("Component ready!");
       setShowSuccess(true);
-      setIsLoading(false); // Ensure loading is set to false
+      setIsLoading(false);
       setTimeout(() => {
         setProgress(0);
         setCurrentStatus("");
@@ -331,18 +343,20 @@ const ChatInterfaceInner = React.memo(() => {
 
     } catch (error) {
       console.error("Error:", error);
-      setMessages(prev => prev.map(msg => 
+      setMessages(prevMessages => prevMessages.map(msg => 
         msg.id === assistantMessageId 
-          ? { ...msg, content: "Sorry, I encountered an error. Please try again.", toolCalls: [] }
+          ? { 
+              ...msg, 
+              content: "Sorry, I encountered an error. Please try again.", 
+              toolCalls: msg.toolCalls?.map(tc => ({ ...tc, isLoading: false })) || [] // Stop loading on error
+            }
           : msg
       ));
       setProgress(0);
       setCurrentStatus("");
       setIsLoading(false);
-      // Remove shimmer on error
-      setLoadingComponents(new Set());
     }
-  }, [input, isLoading, messages]);
+  }, [input, isLoading]);
 
   // Simplified input change handler
   const handleInputChange = useCallback((value: string) => {
@@ -395,10 +409,8 @@ const ChatInterfaceInner = React.memo(() => {
 
   // Memoize stable props to prevent MessageItem re-renders
   const stableMessageProps = useMemo(() => ({
-    loadingComponents,
-    renderedComponents,
     onRenderComponent: renderToolComponent
-  }), [loadingComponents, renderedComponents, renderToolComponent]);
+  }), [renderToolComponent]);
 
   // Memoize rendered messages to prevent unnecessary re-renders
   const renderedMessages = useMemo(() => {

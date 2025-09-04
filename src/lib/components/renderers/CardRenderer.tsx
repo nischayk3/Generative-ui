@@ -199,8 +199,8 @@ export const CardRenderer: React.FC<CardRendererProps> = ({
         </CardHeader>
       )}
 
-      <CardContent className="flex-1 flex flex-col">
-        <div className="space-y-4 flex-1">
+      <CardContent className="flex-1 flex flex-col p-0">
+        <div className="space-y-4 flex-1 w-full h-full">
           {renderContent()}
           {renderComponents()}
         </div>
