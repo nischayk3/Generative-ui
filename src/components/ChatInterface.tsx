@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-import { DynamicRenderer } from "@/src/lib/components/DynamicRenderer";
-import { LayoutRenderer } from "@/src/lib/layout/LayoutRenderer";
-import { componentRegistry } from "@/src/lib/components/ComponentRegistry";
+import { DynamicRenderer } from "@/lib/components/DynamicRenderer";
+import { LayoutRenderer } from "@/lib/layout/LayoutRenderer";
+import { componentRegistry } from "@/lib/components/ComponentRegistry";
 
-import { ComponentWithType } from "@/src/lib/layout/LayoutEngine";
-import { ComponentType } from "@/src/lib/components/schemas";
+import { ComponentWithType } from "@/lib/layout/LayoutEngine";
+import { ComponentType } from "@/lib/components/schemas";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { SkeletonLoader } from "./SkeletonLoader";
 
