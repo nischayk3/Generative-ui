@@ -324,7 +324,7 @@ export const ChartSchema = BaseComponentSchema.extend({
   data: z.object({
     labels: z.array(z.string()),
     datasets: z.array(z.object({
-      label: z.string(),
+      label: z.string().optional(),
       data: z.array(z.number()),
       backgroundColor: z.union([z.string(), z.array(z.string())]).optional(),
       borderColor: z.union([z.string(), z.array(z.string())]).optional(),

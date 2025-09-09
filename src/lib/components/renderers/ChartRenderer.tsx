@@ -14,13 +14,9 @@ export const ChartRenderer: React.FC<ChartProps> = ({
   data,
   options,
   className,
-  sparkline, // Add sparkline prop
+  sparkline,
   ...props
 }) => {
-  // Add debugging
-  console.log('ChartRenderer props:', { title, chartType, data, options, sparkline });
-  
-  // Transform Chart.js format data to Recharts format
   const transformData = () => {
     if (!data || !data.labels || !data.datasets || data.datasets.length === 0) {
       console.warn('ChartRenderer: Invalid data structure:', data);
@@ -37,7 +33,6 @@ export const ChartRenderer: React.FC<ChartProps> = ({
       }));
     }
 
-    // For line and bar charts
     return labels.map((label, index) => ({
       name: label,
       value: dataset.data[index] || 0,
@@ -46,7 +41,6 @@ export const ChartRenderer: React.FC<ChartProps> = ({
 
   const renderChart = () => {
     const chartData = transformData();
-    console.log('ChartRenderer: Transformed data:', chartData);
     
     if (chartData.length === 0) {
       return (
@@ -56,27 +50,19 @@ export const ChartRenderer: React.FC<ChartProps> = ({
       );
     }
 
-    const chartHeight = sparkline ? 60 : 300; // Reduced height for sparklines
-    const showAxisAndGrid = !sparkline;
-    const showTooltipAndLegend = !sparkline;
+    const chartHeight = sparkline ? 60 : 300;
 
     switch (chartType) {
       case 'line':
         return (
           <ResponsiveContainer width="100%" height={chartHeight}>
             <LineChart data={chartData}>
-              {showAxisAndGrid && <CartesianGrid strokeDasharray="3 3" />}
-              {showAxisAndGrid && <XAxis dataKey="name" />}
-              {showAxisAndGrid && <YAxis />}
-              {showTooltipAndLegend && <Tooltip />}
-              {showTooltipAndLegend && <Legend />}
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#8884d8"
-                strokeWidth={sparkline ? 1 : 2} // Thinner line for sparkline
-                dot={sparkline ? false : { fill: '#8884d8' }} // No dots for sparkline
-              />
+              {!sparkline && <CartesianGrid strokeDasharray="3 3" />}
+              {!sparkline && <XAxis dataKey="name" />}
+              {!sparkline && <YAxis />}
+              {!sparkline && <Tooltip />}
+              {!sparkline && <Legend />}
+              <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         );
@@ -90,8 +76,8 @@ export const ChartRenderer: React.FC<ChartProps> = ({
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={sparkline ? false : ({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`} // No labels for sparkline
-                outerRadius={sparkline ? 20 : 80} // Smaller radius for sparkline
+                label={!sparkline ? ({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%` : false}
+                outerRadius={sparkline ? 25 : 80}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -99,7 +85,8 @@ export const ChartRenderer: React.FC<ChartProps> = ({
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              {showTooltipAndLegend && <Tooltip />}
+              {!sparkline && <Tooltip />}
+              {!sparkline && <Legend />}
             </PieChart>
           </ResponsiveContainer>
         );
@@ -109,11 +96,11 @@ export const ChartRenderer: React.FC<ChartProps> = ({
         return (
           <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart data={chartData}>
-              {showAxisAndGrid && <CartesianGrid strokeDasharray="3 3" />}
-              {showAxisAndGrid && <XAxis dataKey="name" />}
-              {showAxisAndGrid && <YAxis />}
-              {showTooltipAndLegend && <Tooltip />}
-              {showTooltipAndLegend && <Legend />}
+              {!sparkline && <CartesianGrid strokeDasharray="3 3" />}
+              {!sparkline && <XAxis dataKey="name" />}
+              {!sparkline && <YAxis />}
+              {!sparkline && <Tooltip />}
+              {!sparkline && <Legend />}
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
           </ResponsiveContainer>
@@ -121,9 +108,13 @@ export const ChartRenderer: React.FC<ChartProps> = ({
     }
   };
 
+  if (sparkline) {
+    return renderChart();
+  }
+
   return (
     <Card className={className} {...props}>
-      {(!sparkline && (title || description)) && ( // Hide CardHeader if sparkline
+      {(title || description) && (
         <CardHeader>
           {title && <CardTitle>{title}</CardTitle>}
           {description && <CardDescription>{description}</CardDescription>}

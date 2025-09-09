@@ -218,7 +218,8 @@ export const FormRenderer: React.FC<FormProps> = ({
       case 'horizontal':
         return 'grid grid-cols-1 md:grid-cols-2 gap-4';
       case 'grid':
-        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+        // Limit grid to a maximum of 2 columns for better form aesthetics
+        return 'grid grid-cols-1 md:grid-cols-2 gap-4';
       default:
         return 'space-y-4';
     }
@@ -238,7 +239,7 @@ export const FormRenderer: React.FC<FormProps> = ({
           <form onSubmit={form.handleSubmit(handleSubmit)} className={getLayoutClasses()}>
             {fields.map(renderField)}
 
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-4 md:col-span-2">
               <Button type="submit">
                 {submitText}
               </Button>

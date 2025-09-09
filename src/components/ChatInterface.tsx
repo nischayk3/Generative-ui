@@ -278,48 +278,40 @@ const ChatInterfaceInner = React.memo(() => {
         }
 
         try {
-          const supportedTypes = ["form", "chart", "table", "card", "avatar"];
-          const codeBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g;
-          const codeBlockMatches = assistantMessageContent.match(codeBlockRegex);
+          const supportedTypes = ["form", "chart", "table", "card", "avatar", "section"];
+          const codeBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/;
+          const match = assistantMessageContent.match(codeBlockRegex);
 
-          if (codeBlockMatches) {
-            for (const match of codeBlockMatches) {
-              try {
-                const jsonContent = match.replace(/```(?:json)?\s*/, '').replace(/\s*```/, '');
-                const potentialToolCall = JSON.parse(jsonContent);
+          if (match && match[1]) {
+            const jsonContent = match[1];
+            const potentialToolCall = JSON.parse(jsonContent);
 
-                if (potentialToolCall.type && supportedTypes.includes(potentialToolCall.type)) {
-                  const newToolCall: ToolCall = {
-                    type: potentialToolCall.type,
-                    data: potentialToolCall,
-                    isLoading: false, // No longer loading
-                    isRendered: true, // Now rendered
-                  };
+            if (potentialToolCall.type && supportedTypes.includes(potentialToolCall.type)) {
+              const newToolCall: ToolCall = {
+                type: potentialToolCall.type,
+                data: potentialToolCall,
+                isLoading: false,
+                isRendered: true,
+              };
 
-                  const isDuplicate = detectedToolCalls.some(tc =>
-                    tc.type === newToolCall.type &&
-                    JSON.stringify(tc.data) === JSON.stringify(newToolCall.data)
-                  );
+              const isDuplicate = detectedToolCalls.some(
+                (tc) => JSON.stringify(tc.data) === JSON.stringify(newToolCall.data)
+              );
 
-                  if (!isDuplicate) {
-                    detectedToolCalls.push(newToolCall);
-                    
-                    setMessages(prevMessages => prevMessages.map(msg =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, toolCalls: [...detectedToolCalls] }
-                        : msg
-                    ));
-                    
-                    break; // Keep break for now to avoid multiple setMessages calls per stream
-                  }
-                }
-              } catch {
-                continue;
+              if (!isDuplicate) {
+                detectedToolCalls.push(newToolCall);
+                setMessages((prevMessages) =>
+                  prevMessages.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, toolCalls: [...detectedToolCalls] }
+                      : msg
+                  )
+                );
               }
             }
           }
         } catch (e) {
-          console.error("Error parsing tool calls:", e);
+          // This catch block will handle JSON parsing errors silently, which is fine during streaming.
         }
       }
 
@@ -485,7 +477,6 @@ const ChatInterfaceInner = React.memo(() => {
                     </div>
                     {progress > 0 && (
                       <div className="space-y-1">
-                        <Progress value={progress} className="h-2" />
                         <div className="text-xs text-gray-600 text-center">
                           {progress}%
                         </div>
