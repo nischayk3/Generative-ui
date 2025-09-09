@@ -21,7 +21,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { FormProps, FormField as FormFieldType } from '../schemas';
+import { FormProps } from '../schemas';
+
+interface FormFieldType {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+}
 
 export const FormRenderer: React.FC<FormProps> = ({
   title,
@@ -97,7 +106,9 @@ export const FormRenderer: React.FC<FormProps> = ({
   });
 
   const handleSubmit = (data: FormData) => {
-    onSubmit?.(data);
+    if (onSubmit && typeof onSubmit === 'function') {
+      (onSubmit as (data: any) => void)(data);
+    }
   };
 
   const renderField = (field: FormFieldType) => {
@@ -137,7 +148,7 @@ export const FormRenderer: React.FC<FormProps> = ({
               <SelectValue placeholder={field.placeholder || 'Select an option'} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option) => (
+              {field.options?.map((option: string) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -166,7 +177,7 @@ export const FormRenderer: React.FC<FormProps> = ({
             value={formField.value}
             onValueChange={formField.onChange}
           >
-            {field.options?.map((option) => (
+            {field.options?.map((option: string) => (
               <div key={option} className="flex items-center space-x-2">
                 <RadioGroupItem value={option} id={option} />
                 <label htmlFor={option} className="text-sm font-medium leading-none">

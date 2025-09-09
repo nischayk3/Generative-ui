@@ -83,10 +83,6 @@ const MessageItem = React.memo(({
         <LayoutRenderer
           components={layoutComponents as ComponentType[]}
           layoutType="auto"
-          userPreferences={{
-            theme: 'light',
-            density: 'comfortable',
-          }}
         />
       </div>
     );
@@ -128,7 +124,7 @@ const MessageItem = React.memo(({
                   return (
                     <div key={key} className="w-full">
                       {isLoading ? (
-                        <SkeletonLoader type={toolCall.type} />
+                        <SkeletonLoader type={toolCall.type as "form" | "table" | "card" | "avatar" | "chart"} />
                       ) : isRendered ? (
                         onRenderComponent(toolCall)
                       ) : null}
@@ -377,7 +373,7 @@ const ChatInterfaceInner = React.memo(() => {
                 }
               </p>
               <p className="text-xs text-yellow-600 mt-2">
-                Available components: {availableComponents.map(c => c.metadata.type).join(', ')}
+                Available components: {componentRegistry.getAllComponents().map((c: any) => c.metadata.type).join(', ')}
               </p>
             </div>
           </div>
