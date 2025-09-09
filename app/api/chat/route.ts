@@ -47,7 +47,7 @@ This is the gold standard for dashboards. Use this as your inspiration when a us
       "layout": "grid",
       "components": [
         { "type": "card", "title": "Total Revenue", "description": "$1.25M", "components": [{"type": "chart", "chartType": "line", "sparkline": true, "data": {"labels": ["J","F","M","A"],"datasets": [{"data": [98,110,105,125]}]}}], 
-        { "type": "card", "title": "Monthly Growth", "description": "+15%", "components": [{"type": "chart", "chartType": "line", "sparkline": true, "data": {"labels": ["J","F","M","A"],"datasets": [{"data": [5,8,12,15]}]}}]}, 
+        { "type": "card", "title": "Monthly Growth", "description": "+15%", "components": [{"type": "chart", "chartType": "line", "sparkline": true, "data": {"labels": ["J","F","M","A"],"datasets": [{"data": [5,8,12,15]}]}}], 
         { "type": "card", "title": "Customer Retention", "description": "85%", "components": [{"type": "chart", "chartType": "bar", "sparkline": true, "data": {"labels": ["J","F","M","A"],"datasets": [{"data": [80,82,88,85]}]}}]}, 
         { "type": "card", "title": "New Customers", "description": "320", "components": [{"type": "chart", "chartType": "bar", "sparkline": true, "data": {"labels": ["J","F","M","A"],"datasets": [{"data": [250,280,300,320]}]}}]}
       ]
