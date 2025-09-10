@@ -274,35 +274,42 @@ const ChatInterfaceInner = React.memo(() => {
         }
 
         try {
-          const supportedTypes = ["form", "chart", "table", "card", "avatar", "section"];
+          // Dynamically get all available component types from the registry
+          const supportedTypes = componentRegistry.getAllComponents()
+            .filter(comp => comp.metadata.available)
+            .map(comp => comp.metadata.type);
+          
           const codeBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/;
           const match = assistantMessageContent.match(codeBlockRegex);
 
           if (match && match[1]) {
             const jsonContent = match[1];
-            const potentialToolCall = JSON.parse(jsonContent);
+            // Check if the JSON is complete before parsing
+            if (jsonContent.lastIndexOf('}') === jsonContent.length - 1) {
+              const potentialToolCall = JSON.parse(jsonContent);
 
-            if (potentialToolCall.type && supportedTypes.includes(potentialToolCall.type)) {
-              const newToolCall: ToolCall = {
-                type: potentialToolCall.type,
-                data: potentialToolCall,
-                isLoading: false,
-                isRendered: true,
-              };
+              if (potentialToolCall.type && supportedTypes.includes(potentialToolCall.type)) {
+                const newToolCall: ToolCall = {
+                  type: potentialToolCall.type,
+                  data: potentialToolCall,
+                  isLoading: false,
+                  isRendered: true,
+                };
 
-              const isDuplicate = detectedToolCalls.some(
-                (tc) => JSON.stringify(tc.data) === JSON.stringify(newToolCall.data)
-              );
-
-              if (!isDuplicate) {
-                detectedToolCalls.push(newToolCall);
-                setMessages((prevMessages) =>
-                  prevMessages.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, toolCalls: [...detectedToolCalls] }
-                      : msg
-                  )
+                const isDuplicate = detectedToolCalls.some(
+                  (tc) => JSON.stringify(tc.data) === JSON.stringify(newToolCall.data)
                 );
+
+                if (!isDuplicate) {
+                  detectedToolCalls.push(newToolCall);
+                  setMessages((prevMessages) =>
+                    prevMessages.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, toolCalls: [...detectedToolCalls] }
+                        : msg
+                    )
+                  );
+                }
               }
             }
           }

@@ -21,6 +21,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { FormProps } from '../schemas';
 
 interface FormFieldType {
@@ -35,7 +40,7 @@ interface FormFieldType {
 export const FormRenderer: React.FC<FormProps> = ({
   title,
   description,
-  fields,
+  fields = [],
   submitText = 'Submit',
   onSubmit,
   layout = 'vertical',
@@ -45,6 +50,14 @@ export const FormRenderer: React.FC<FormProps> = ({
   // Create dynamic Zod schema from fields
   const createSchema = () => {
     const schemaFields: Record<string, z.ZodTypeAny> = {};
+
+    // Safety check for undefined fields
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      console.warn('FormRenderer: fields prop is undefined, not an array, or empty:', fields);
+      return z.object({
+        _placeholder: z.string().optional() // Minimal schema to prevent TypeScript errors
+      });
+    }
 
     fields.forEach((field: FormFieldType) => {
       let validator: z.ZodTypeAny;
@@ -80,6 +93,13 @@ export const FormRenderer: React.FC<FormProps> = ({
           }
           break;
 
+        case 'datePicker':
+          validator = z.date();
+          if (field.required) {
+            validator = validator.refine((date) => date !== undefined, `${field.label} is required`);
+          }
+          break;
+
         default:
           validator = z.string();
           if (field.required) {
@@ -88,7 +108,9 @@ export const FormRenderer: React.FC<FormProps> = ({
           break;
       }
 
-      if (!field.required && field.type !== 'checkbox' && field.type !== 'switch') {
+      if (!field.required && field.type !== 'checkbox' && field.type !== 'switch' && field.type !== 'datePicker') {
+        validator = validator.optional();
+      } else if (!field.required && field.type === 'datePicker') {
         validator = validator.optional();
       }
 
@@ -212,6 +234,34 @@ export const FormRenderer: React.FC<FormProps> = ({
           />
         );
 
+      case 'datePicker':
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  'w-full justify-start text-left font-normal',
+                  !formField.value && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formField.value ? format(formField.value, 'PPP') : (
+                  <span>{field.placeholder || 'Pick a date'}</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={formField.value}
+                onSelect={formField.onChange}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        );
+
       default:
         return (
           <Input
@@ -248,7 +298,13 @@ export const FormRenderer: React.FC<FormProps> = ({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className={getLayoutClasses()}>
-            {fields.map(renderField)}
+            {fields && Array.isArray(fields) && fields.length > 0 ? (
+              fields.map(renderField)
+            ) : (
+              <div className="text-center text-muted-foreground py-4">
+                No form fields configured
+              </div>
+            )}
 
             <div className="flex justify-end pt-4 md:col-span-2">
               <Button type="submit">

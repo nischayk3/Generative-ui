@@ -223,6 +223,166 @@ const loadComponentRenderer = async (componentType: string): Promise<ComponentTy
           console.warn(`CommandRenderer not found, using GenericRenderer`);
         }
         break;
+      case 'calendar':
+        try {
+          const { CalendarRenderer } = await import('./renderers/CalendarRenderer');
+          renderer = CalendarRenderer;
+        } catch (e) {
+          console.warn(`CalendarRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'dropdownMenu':
+        try {
+          const { DropdownMenuRenderer } = await import('./renderers/DropdownMenuRenderer');
+          renderer = DropdownMenuRenderer;
+        } catch (e) {
+          console.warn(`DropdownMenuRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'popover':
+        try {
+          const { PopoverRenderer } = await import('./renderers/PopoverRenderer');
+          renderer = PopoverRenderer;
+        } catch (e) {
+          console.warn(`PopoverRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'tooltip':
+        try {
+          const { TooltipRenderer } = await import('./renderers/TooltipRenderer');
+          renderer = TooltipRenderer;
+        } catch (e) {
+          console.warn(`TooltipRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'resizable':
+        try {
+          const { ResizableRenderer } = await import('./renderers/ResizableRenderer');
+          renderer = ResizableRenderer;
+        } catch (e) {
+          console.warn(`ResizableRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'datePicker':
+        try {
+          const { DatePickerRenderer } = await import('./renderers/DatePickerRenderer');
+          renderer = DatePickerRenderer;
+        } catch (e) {
+          console.warn(`DatePickerRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'checkbox':
+        try {
+          const { CheckboxRenderer } = await import('./renderers/CheckboxRenderer');
+          renderer = CheckboxRenderer;
+        } catch (e) {
+          console.warn(`CheckboxRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'select':
+        try {
+          const { SelectRenderer } = await import('./renderers/SelectRenderer');
+          renderer = SelectRenderer;
+        } catch (e) {
+          console.warn(`SelectRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'textarea':
+        try {
+          const { TextareaRenderer } = await import('./renderers/TextareaRenderer');
+          renderer = TextareaRenderer;
+        } catch (e) {
+          console.warn(`TextareaRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'slider':
+        try {
+          const { SliderRenderer } = await import('./renderers/SliderRenderer');
+          renderer = SliderRenderer;
+        } catch (e) {
+          console.warn(`SliderRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'switch':
+        try {
+          const { SwitchRenderer } = await import('./renderers/SwitchRenderer');
+          renderer = SwitchRenderer;
+        } catch (e) {
+          console.warn(`SwitchRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'separator':
+        try {
+          const { SeparatorRenderer } = await import('./renderers/SeparatorRenderer');
+          renderer = SeparatorRenderer;
+        } catch (e) {
+          console.warn(`SeparatorRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'breadcrumb':
+        try {
+          const { BreadcrumbRenderer } = await import('./renderers/BreadcrumbRenderer');
+          renderer = BreadcrumbRenderer;
+        } catch (e) {
+          console.warn(`BreadcrumbRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'sheet':
+        try {
+          const { SheetRenderer } = await import('./renderers/SheetRenderer');
+          renderer = SheetRenderer;
+        } catch (e) {
+          console.warn(`SheetRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'alertDialog':
+        try {
+          const { AlertDialogRenderer } = await import('./renderers/AlertDialogRenderer');
+          renderer = AlertDialogRenderer;
+        } catch (e) {
+          console.warn(`AlertDialogRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'collapsible':
+        try {
+          const { CollapsibleRenderer } = await import('./renderers/CollapsibleRenderer');
+          renderer = CollapsibleRenderer;
+        } catch (e) {
+          console.warn(`CollapsibleRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'pagination':
+        try {
+          const { PaginationRenderer } = await import('./renderers/PaginationRenderer');
+          renderer = PaginationRenderer;
+        } catch (e) {
+          console.warn(`PaginationRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'stepper':
+        try {
+          const { StepperRenderer } = await import('./renderers/StepperRenderer');
+          renderer = StepperRenderer;
+        } catch (e) {
+          console.warn(`StepperRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'dataTable':
+        try {
+          const { DataTableRenderer } = await import('./renderers/DataTableRenderer');
+          renderer = DataTableRenderer;
+        } catch (e) {
+          console.warn(`DataTableRenderer not found, using GenericRenderer`);
+        }
+        break;
+      case 'aspectRatio':
+        try {
+          const { AspectRatioRenderer } = await import('./renderers/AspectRatioRenderer');
+          renderer = AspectRatioRenderer;
+        } catch (e) {
+          console.warn(`AspectRatioRenderer not found, using GenericRenderer`);
+        }
+        break;
       default:
         // Fallback to generic renderer
         try {

@@ -16,7 +16,7 @@ export const CardSchema: z.ZodSchema = BaseComponentSchema.extend({
   footer: z.unknown().optional(),
   components: z.array(z.any()).optional(), // Allow any object structure for components
   variant: z.enum(['default', 'elevated', 'outlined', 'filled']).optional(),
-  layout: z.enum(['default', 'grid', 'sidebar', 'dashboard']).optional(),
+  layout: z.enum(['default', 'grid', 'sidebar', 'dashboard', 'vertical', 'profile']).optional(),
 });
 
 export const AccordionSchema = BaseComponentSchema.extend({
@@ -183,7 +183,8 @@ export const AvatarSchema = BaseComponentSchema.extend({
 
 export const BadgeSchema = BaseComponentSchema.extend({
   type: z.literal('badge'),
-  children: z.string(),
+  children: z.string().optional(),
+  text: z.string().optional(), // Allow both text and children for flexibility
   variant: z.enum(['default', 'secondary', 'destructive', 'outline']).optional(),
 });
 
@@ -211,9 +212,13 @@ export const AlertDialogSchema = BaseComponentSchema.extend({
   title: z.string(),
   description: z.string(),
   cancelText: z.string().optional(),
-  actionText: z.string().optional(),
-  onAction: z.function().optional(),
+  confirmText: z.string().optional(),
+  actionText: z.string().optional(), // Keep for backward compatibility
+  variant: z.enum(['default', 'destructive']).optional(),
+  trigger: z.union([z.string(), z.object({ text: z.string(), variant: z.string().optional() })]).optional(),
+  onConfirm: z.function().optional(),
   onCancel: z.function().optional(),
+  onAction: z.function().optional(), // Keep for backward compatibility
 });
 
 export const DialogSchema = BaseComponentSchema.extend({
@@ -236,21 +241,6 @@ export const DrawerSchema = BaseComponentSchema.extend({
   onOpenChange: z.function().optional(),
 });
 
-export const PopoverSchema = BaseComponentSchema.extend({
-  type: z.literal('popover'),
-  content: z.any(),
-  trigger: z.any(),
-  open: z.boolean().optional(),
-  onOpenChange: z.function().optional(),
-});
-
-export const TooltipSchema = BaseComponentSchema.extend({
-  type: z.literal('tooltip'),
-  content: z.string(),
-  children: z.any(),
-  side: z.enum(['top', 'right', 'bottom', 'left']).optional(),
-  align: z.enum(['start', 'center', 'end']).optional(),
-});
 
 export const SonnerSchema = BaseComponentSchema.extend({
   type: z.literal('sonner'),
@@ -343,7 +333,7 @@ export const FormSchema = BaseComponentSchema.extend({
   fields: z.array(z.object({
     name: z.string(),
     label: z.string(),
-    type: z.enum(['text', 'email', 'password', 'number', 'tel', 'url', 'textarea', 'select', 'checkbox', 'radio', 'switch', 'slider']),
+    type: z.enum(['text', 'email', 'password', 'number', 'tel', 'url', 'textarea', 'select', 'checkbox', 'radio', 'switch', 'slider', 'datePicker']),
     required: z.boolean().optional(),
     placeholder: z.string().optional(),
     options: z.array(z.string()).optional(),
@@ -351,7 +341,7 @@ export const FormSchema = BaseComponentSchema.extend({
     min: z.number().optional(),
     max: z.number().optional(),
     step: z.number().optional(),
-  })),
+  })).default([]),
   submitText: z.string().optional(),
   onSubmit: z.function().optional(),
   layout: z.enum(['vertical', 'horizontal', 'grid']).optional(),
@@ -377,7 +367,6 @@ export const HoverCardSchema = BaseComponentSchema.extend({
   align: z.enum(['start', 'center', 'end']).optional(),
 });
 
-// Dropdown Menu Component
 export const DropdownMenuSchema = BaseComponentSchema.extend({
   type: z.literal('dropdownMenu'),
   trigger: z.any(),
@@ -392,6 +381,24 @@ export const DropdownMenuSchema = BaseComponentSchema.extend({
       disabled: z.boolean().optional(),
     })).optional(),
   })),
+  side: z.enum(['top', 'right', 'bottom', 'left']).optional(),
+  align: z.enum(['start', 'center', 'end']).optional(),
+});
+
+// Popover Component
+export const PopoverSchema = BaseComponentSchema.extend({
+  type: z.literal('popover'),
+  trigger: z.any(),
+  content: z.any(),
+  open: z.boolean().optional(),
+  onOpenChange: z.function().optional(),
+});
+
+// Tooltip Component
+export const TooltipSchema = BaseComponentSchema.extend({
+  type: z.literal('tooltip'),
+  content: z.string(),
+  children: z.any(),
   side: z.enum(['top', 'right', 'bottom', 'left']).optional(),
   align: z.enum(['start', 'center', 'end']).optional(),
 });
@@ -444,6 +451,33 @@ export const ResizableSchema = BaseComponentSchema.extend({
   maxSize: z.number().optional(),
 });
 
+// Calendar Component
+export const CalendarSchema = BaseComponentSchema.extend({
+  type: z.literal('calendar'),
+  // Simple calendar props
+  mode: z.enum(['single', 'range']).optional(),
+  selected: z.any().optional(),
+  onSelect: z.function().optional(),
+  // Event calendar props
+  title: z.string().optional(),
+  description: z.string().optional(),
+  events: z.array(z.object({
+    title: z.string(),
+    date: z.string(),
+    time: z.string().optional(),
+    location: z.string().optional(),
+    description: z.string().optional(),
+  })).optional(),
+  onEventClick: z.string().optional(),
+});
+
+// Date Picker Component
+export const DatePickerSchema = BaseComponentSchema.extend({
+  type: z.literal('datePicker'),
+  date: z.any().optional(),
+  setDate: z.function().optional(),
+});
+
 // Command Component
 export const CommandSchema = BaseComponentSchema.extend({
   type: z.literal('command'),
@@ -457,8 +491,51 @@ export const CommandSchema = BaseComponentSchema.extend({
   onValueChange: z.function().optional(),
 });
 
+// Stepper Component
+export const StepperSchema = BaseComponentSchema.extend({
+  type: z.literal('stepper'),
+  steps: z.array(z.object({
+    title: z.string(),
+    description: z.string().optional(),
+    content: z.union([
+      z.string(),
+      z.object({
+        type: z.string(),
+      }).passthrough()
+    ]).optional(),
+  })),
+  currentStep: z.number().default(0),
+  showContent: z.boolean().default(true),
+  allowSkip: z.boolean().default(false),
+  showNavigation: z.boolean().default(true),
+});
+
+// DataTable Component
+export const DataTableSchema = BaseComponentSchema.extend({
+  type: z.literal('dataTable'),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  data: z.array(z.record(z.string(), z.unknown())),
+  columns: z.array(z.union([
+    z.string(),
+    z.object({
+      key: z.string(),
+      title: z.string(),
+      sortable: z.boolean().optional(),
+    }),
+    z.object({
+      header: z.string(),
+      field: z.string(),
+      sortable: z.boolean().optional(),
+    })
+  ])),
+  searchable: z.boolean().default(true),
+  sortable: z.boolean().default(true),
+  filterable: z.boolean().default(false),
+});
+
 // Component type validation helper
-const validateComponentByType = (data: any) => {
+export const validateComponentByType = (data: any) => {
   if (!data || typeof data !== 'object' || !data.type) {
     return false;
   }
@@ -508,6 +585,8 @@ const validateComponentByType = (data: any) => {
     aspectRatio: AspectRatioSchema,
     resizable: ResizableSchema,
     command: CommandSchema,
+    stepper: StepperSchema,
+    dataTable: DataTableSchema,
   };
 
   const schema = schemaMap[componentType];
@@ -534,4 +613,13 @@ export type ChartProps = z.infer<typeof ChartSchema>;
 export type TabsProps = z.infer<typeof TabsSchema>;
 export type SectionProps = z.infer<typeof SectionSchema>;
 export type AvatarProps = z.infer<typeof AvatarSchema>;
+export type BadgeProps = z.infer<typeof BadgeSchema>;
 export type AccordionProps = z.infer<typeof AccordionSchema>;
+export type CalendarProps = z.infer<typeof CalendarSchema>;
+export type DatePickerProps = z.infer<typeof DatePickerSchema>;
+export type DropdownMenuProps = z.infer<typeof DropdownMenuSchema>;
+export type PopoverProps = z.infer<typeof PopoverSchema>;
+export type TooltipProps = z.infer<typeof TooltipSchema>;
+export type ResizableProps = z.infer<typeof ResizableSchema>;
+export type StepperProps = z.infer<typeof StepperSchema>;
+export type DataTableProps = z.infer<typeof DataTableSchema>;

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 interface SkeletonLoaderProps {
-  type: "chart" | "table" | "form" | "card" | "avatar";
+  type: "chart" | "table" | "form" | "card" | "avatar" | string;
   className?: string;
 }
 

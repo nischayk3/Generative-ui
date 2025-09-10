@@ -100,6 +100,12 @@ export class ComponentDiscovery {
       // Data Components
       'table', 'chart',
 
+      // Date/Time Components
+      'calendar', 'datePicker',
+      
+      // Multi-step Components
+      'stepper', 'dataTable',
+
       // Button Component
       'button',
 
@@ -180,6 +186,10 @@ export class ComponentDiscovery {
       // Data
       'table': 'data',
       'chart': 'data',
+            'calendar': 'input',
+            'datePicker': 'input',
+            'stepper': 'layout',
+            'dataTable': 'display',
     };
 
     return categoryMap[componentType] || 'display';
@@ -190,6 +200,7 @@ export class ComponentDiscovery {
       accordion: 'Collapsible content panels for organizing information',
       alert: 'Informational messages and notifications',
       alertDialog: 'Modal dialogs for important confirmations',
+      aspectRatio: 'Container that maintains a specific aspect ratio for content',
       avatar: 'User profile pictures and representations',
       badge: 'Small status indicators and labels',
       breadcrumb: 'Navigation breadcrumb trails',
@@ -228,6 +239,10 @@ export class ComponentDiscovery {
       toggleGroup: 'Grouped toggle controls',
       tooltip: 'Informational tooltips',
       chart: 'Data visualization charts and graphs',
+      calendar: 'Interactive calendar for date selection and event display',
+      datePicker: 'Date picker component for date selection',
+      stepper: 'Multi-step workflow component for guided processes',
+      dataTable: 'Enhanced table with search, sort, and filter capabilities',
     };
 
     return {
